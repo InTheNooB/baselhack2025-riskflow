@@ -743,6 +743,52 @@ export default function CaseDetailComponent({
           </Card>
         )}
 
+        {/* Escalation Information (Chief View) */}
+        {isChief &&
+          caseData.status === "escalated" &&
+          caseData.review?.escalationReason && (
+            <Card className="mb-8 border-orange-200 bg-orange-50/50">
+              <CardHeader>
+                <CardTitle className="text-orange-900">
+                  Why This Case Was Escalated
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Escalation Reason
+                    </p>
+                    <p className="text-gray-900 leading-relaxed">
+                      {caseData.review.escalationReason}
+                    </p>
+                  </div>
+                  {caseData.review.underwriter && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">
+                        Escalated By
+                      </p>
+                      <p className="text-gray-700">
+                        {caseData.review.underwriter.name} (
+                        {caseData.review.underwriter.email})
+                      </p>
+                    </div>
+                  )}
+                  {caseData.review.reviewedAt && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-1">
+                        Escalated On
+                      </p>
+                      <p className="text-gray-600">
+                        {formatDate(caseData.review.reviewedAt)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
         {/* Chief Underwriter Actions */}
         {isChief &&
           caseData.status === "escalated" &&

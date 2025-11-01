@@ -464,7 +464,7 @@ async function main() {
     data: [
       {
         name: "bmi",
-        label: "BMI loading: +2% per BMI point above 25",
+        label: "BMI loading: +2% per BMI point above/under 25",
         expression: "1 + max(0, (bmi - 25) * 0.02)",
         description: "Body Mass Index risk factor",
         isActive: true,
@@ -596,32 +596,38 @@ async function main() {
   const productsData = [
     {
       name: "Term Life Insurance",
-      description: "Comprehensive coverage for a specified term period. Provides financial security for your loved ones with affordable premiums.",
+      description:
+        "Comprehensive coverage for a specified term period. Provides financial security for your loved ones with affordable premiums.",
       isActive: true,
     },
     {
       name: "Health Insurance",
-      description: "Protect your health and finances with comprehensive medical coverage. Get access to quality healthcare without worrying about medical bills.",
+      description:
+        "Protect your health and finances with comprehensive medical coverage. Get access to quality healthcare without worrying about medical bills.",
       isActive: true,
     },
     {
       name: "Home Insurance",
-      description: "Safeguard your property and belongings against damage, theft, and natural disasters. Peace of mind for homeowners and renters.",
+      description:
+        "Safeguard your property and belongings against damage, theft, and natural disasters. Peace of mind for homeowners and renters.",
       isActive: true,
     },
     {
       name: "Auto Insurance",
-      description: "Complete coverage for your vehicle including liability, collision, and comprehensive protection. Drive with confidence on the road.",
+      description:
+        "Complete coverage for your vehicle including liability, collision, and comprehensive protection. Drive with confidence on the road.",
       isActive: true,
     },
     {
       name: "Business Liability Insurance",
-      description: "Protect your business from legal claims and financial losses. Essential coverage for professional liability and general business risks.",
+      description:
+        "Protect your business from legal claims and financial losses. Essential coverage for professional liability and general business risks.",
       isActive: true,
     },
     {
       name: "Disability Insurance",
-      description: "Income protection if you become unable to work due to illness or injury. Secure your financial future and maintain your standard of living.",
+      description:
+        "Income protection if you become unable to work due to illness or injury. Secure your financial future and maintain your standard of living.",
       isActive: true,
     },
   ];
@@ -636,7 +642,9 @@ async function main() {
     });
     createdProducts.push(product);
   }
-  const product = createdProducts.find((p) => p.name === "Term Life Insurance") || createdProducts[0];
+  const product =
+    createdProducts.find((p) => p.name === "Term Life Insurance") ||
+    createdProducts[0];
   console.log(`✅ ${createdProducts.length} products created`);
 
   // Create Survey Questions for the Product
