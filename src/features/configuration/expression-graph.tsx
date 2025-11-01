@@ -37,7 +37,6 @@ export default function ExpressionGraph({
         
         // Sample values based on variable type
         let samples: number[] = [];
-        let xLabel = varName;
 
         if (varName === "bmi") {
           samples = Array.from({ length: 41 }, (_, i) => 15 + i); // BMI 15-55
@@ -45,9 +44,11 @@ export default function ExpressionGraph({
           samples = Array.from({ length: 61 }, (_, i) => 18 + i); // Age 18-78
         } else if (varName === "isSmoking" || varName.includes("is") || varName.includes("Smoking")) {
           // Boolean variable - show two points
+          const contextFalse: Record<string, string | number | boolean> = { [varName]: false };
+          const contextTrue: Record<string, string | number | boolean> = { [varName]: true };
           return [
-            { x: "No", y: expr.evaluate({ [varName]: false }) },
-            { x: "Yes", y: expr.evaluate({ [varName]: true }) },
+            { x: "No", y: Number(expr.evaluate(contextFalse as unknown as Parameters<typeof expr.evaluate>[0])) },
+            { x: "Yes", y: Number(expr.evaluate(contextTrue as unknown as Parameters<typeof expr.evaluate>[0])) },
           ];
         } else {
           // Generic numeric variable
@@ -57,7 +58,7 @@ export default function ExpressionGraph({
         // Evaluate expression for each sample
         const data = samples.map((x) => {
           try {
-            const context: Record<string, any> = {};
+            const context: Record<string, string | number | boolean> = {};
             vars.forEach((v) => {
               if (v === varName) {
                 context[v] = x;
@@ -72,7 +73,8 @@ export default function ExpressionGraph({
                 else context[v] = 0;
               }
             });
-            const y = expr.evaluate(context);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const y = expr.evaluate(context as any);
             return { x, y: typeof y === "number" ? y : y ? 1 : 0 };
           } catch {
             return { x, y: 0 };
@@ -103,7 +105,7 @@ export default function ExpressionGraph({
 
         const data = samples.map((x) => {
           try {
-            const context: Record<string, any> = {};
+            const context: Record<string, string | number | boolean> = {};
             vars.forEach((v) => {
               if (v === varName) {
                 context[v] = x;
@@ -115,7 +117,8 @@ export default function ExpressionGraph({
                 else context[v] = v === "bmi" ? 25 : v === "age" ? 40 : 0;
               }
             });
-            const result = expr.evaluate(context);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const result = expr.evaluate(context as any);
             return { x, y: result ? 1 : 0 };
           } catch {
             return { x, y: 0 };
@@ -126,7 +129,6 @@ export default function ExpressionGraph({
       } else {
         // Mortality formula - usually depends on age
         const vars = expr.variables();
-        const varName = vars[0] || "age";
         const samples = Array.from({ length: 61 }, (_, i) => 18 + i);
 
         const data = samples.map((x) => {
@@ -204,10 +206,9 @@ export default function ExpressionGraph({
               border: `1px solid ${lineColor}`,
               borderRadius: "6px",
             }}
-            formatter={(value: number, name: string, props: any) => {
+            formatter={(value: number) => {
               if (isBoolean) return [`${value ? "TRUE" : "FALSE"}`, "Result"];
-              const xVal = props.payload.x;
-              return [`${typeof value === "number" ? value.toFixed(3) : value}`, `f(${xVal})`];
+              return [`${typeof value === "number" ? value.toFixed(3) : value}`, "Value"];
             }}
             labelFormatter={(label) => `Input: ${label}`}
           />

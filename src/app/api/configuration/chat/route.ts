@@ -17,16 +17,24 @@ export async function POST(req: NextRequest) {
 CURRENT CONFIGURATION:
 
 Risk Factors:
-${rulesData.riskFactors.map((r: any) => `- ${r.name} (${r.label}): ${r.expression}`).join("\n")}
+${rulesData.riskFactors
+  .map((r: any) => `- ${r.name} (${r.label}): ${r.expression}`)
+  .join("\n")}
 
 Decline Rules:
-${rulesData.declineRules.map((r: any) => `- ${r.name} (${r.label}): ${r.expression}`).join("\n")}
+${rulesData.declineRules
+  .map((r: any) => `- ${r.name} (${r.label}): ${r.expression}`)
+  .join("\n")}
 
 Gather Info Rules:
-${rulesData.gatherInfoRules.map((r: any) => `- ${r.name} (${r.label}): ${r.condition}`).join("\n")}
+${rulesData.gatherInfoRules
+  .map((r: any) => `- ${r.name} (${r.label}): ${r.condition}`)
+  .join("\n")}
 
 Mortality Formulas:
-${rulesData.mortalityFormulas.map((r: any) => `- ${r.sex}: ${r.formula}`).join("\n")}
+${rulesData.mortalityFormulas
+  .map((r: any) => `- ${r.sex}: ${r.formula}`)
+  .join("\n")}
 
 You are an AI assistant helping to configure insurance underwriting rules. When the user asks to modify a rule, you should:
 1. Identify which rule they want to modify
@@ -51,12 +59,11 @@ ${rulesContext}
 
 Be concise but helpful. When generating rule changes, always include the JSON block with the new expression.`;
 
-    const result = await streamText({
+    const result = streamText({
       model: openai("gpt-4o"),
       system: systemPrompt,
       messages: convertToModelMessages(messages as UIMessage[]),
       temperature: 0.3,
-      maxTokens: 2000,
     });
 
     return result.toUIMessageStreamResponse();
@@ -65,4 +72,3 @@ Be concise but helpful. When generating rule changes, always include the JSON bl
     return new Response("Error processing request", { status: 500 });
   }
 }
-
