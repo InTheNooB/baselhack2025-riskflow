@@ -77,6 +77,8 @@ interface CaseDetailProps {
       adjustmentReason: string | null;
       adjustmentNotes: string | null;
       escalationReason: string | null;
+      status: string;
+      reviewedAt: Date | null;
       underwriter: {
         name: string;
         email: string;
@@ -641,6 +643,68 @@ export default function CaseDetailComponent({
               Confirm
             </Button>
           </div>
+        )}
+
+        {/* Review Status Card (after submission) */}
+        {!isChief && caseData.review && (
+          <Card className="mb-8 border-orange-200 bg-orange-50/50">
+            <CardHeader>
+              <CardTitle className="text-orange-900">Review Status</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">Status</p>
+                <p className="text-orange-700 font-semibold">
+                  {caseData.status === "escalated"
+                    ? "Escalated to Chief Underwriter"
+                    : caseData.review.status === "completed"
+                    ? "Review Completed"
+                    : "Pending Review"}
+                </p>
+              </div>
+              {caseData.review.escalationReason && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Escalation Reason
+                  </p>
+                  <p className="text-gray-700">
+                    {caseData.review.escalationReason}
+                  </p>
+                </div>
+              )}
+              {caseData.review.reviewedAt && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    Submitted
+                  </p>
+                  <p className="text-gray-600">
+                    {formatDate(caseData.review.reviewedAt)}
+                  </p>
+                </div>
+              )}
+              {caseData.review.chiefReview && (
+                <div className="mt-4 pt-4 border-t border-orange-200">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Chief Underwriter Decision
+                  </p>
+                  <p className="text-gray-900 font-semibold mb-1">
+                    {caseData.review.chiefReview.decision}
+                  </p>
+                  {caseData.review.chiefReview.decisionReason && (
+                    <p className="text-gray-700 text-sm">
+                      {caseData.review.chiefReview.decisionReason}
+                    </p>
+                  )}
+                  {caseData.review.chiefReview.finalPremiumCHF && (
+                    <p className="text-gray-900 mt-2">
+                      Final Premium:{" "}
+                      {formatCHF(caseData.review.chiefReview.finalPremiumCHF)}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Escalation Reason Section */}

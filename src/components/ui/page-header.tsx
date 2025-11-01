@@ -8,6 +8,7 @@ import Image from "next/image";
 
 interface PageHeaderProps {
   title?: string;
+  role?: string;
   subtitle?: string;
   showBackButton?: boolean;
   backHref?: string;
@@ -16,6 +17,7 @@ interface PageHeaderProps {
 
 export function PageHeader({
   title,
+  role = "Underwriter",
   subtitle,
   showBackButton = false,
   backHref,
@@ -79,7 +81,7 @@ export function PageHeader({
                     <p className="text-sm font-medium text-gray-900">
                       Gabriel Chätschgi
                     </p>
-                    <p className="text-xs text-gray-500">Underwriter</p>
+                    <p className="text-xs text-gray-500">{role}</p>
                   </div>
                 </div>
                 <button className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
