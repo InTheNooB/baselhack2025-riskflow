@@ -1,0 +1,405 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// EXISTING EVALUATION SYSTEM MODELS (from DOCUMENTATION.md)
+// ============================================================================
+
+// Risk Factor Configuration
+// These define the expressions that calculate risk multipliers
+model RiskFactor {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "bmi", "smoker", "age"
+  label       String   // Display label for UI
+  expression  String   // Expression using expr-eval syntax
+  description String?  // Optional description
+  isActive    Boolean  @default(true)
+  order       Int      @default(0) // Order for display/evaluation
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isActive, order])
+}
+
+// Decline Rules - Configurable conditions that result in DECLINE
+model DeclineRule {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "severe_ongoing"
+  label       String   // Human-readable name
+  expression  String   // Expression that evaluates to true/false
+  description String?  // Explanation of what this rule checks
+  reason      String   // Message shown to applicant when triggered
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0) // Lower = checked first
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isActive, priority])
+}
+
+// GATHER_INFO Rules - Conditions that trigger additional questions
+model GatherInfoRule {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "missing_bmi", "unclear_status"
+  label       String
+  condition   String   // Expression that evaluates to true/false
+  description String?
+  isActive    Boolean  @default(true)
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  questions   GatherInfoQuestion[] // Questions associated with this rule
+  
+  @@index([isActive, priority])
+}
+
+
+// Questions shown when GATHER_INFO is triggered
+model GatherInfoQuestion {
+  id           String        @id @default(cuid())
+  ruleId       String
+  questionText String         // The actual question
+  inputType    String         @default("text") // "text", "number", "yesno", etc.
+  isRequired   Boolean        @default(true)
+  order        Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  rule         GatherInfoRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  
+  @@index([ruleId, order])
+}
+
+// Mortality Rate Tables - Base premium calculation
+model MortalityRate {
+  id        String   @id @default(cuid())
+  sex       String   // "male" or "female"
+  age       Int      // Age in years
+  baseRate  Float    // Base mortality rate (decimal, e.g., 0.0017)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([sex, age])
+  @@index([sex, age])
+}
+
+// Alternative: Formula-based mortality rates (more flexible)
+model MortalityRateFormula {
+  id          String   @id @default(cuid())
+  sex         String   @unique // "male" or "female"
+  formula     String   // Expression like "0.0008 + age * 0.00002"
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([sex, isActive])
+}
+
+// System Configuration - Global settings
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   // JSON string for complex values
+  type        String   @default("string") // "string", "number", "boolean", "json"
+  description String?
+  updatedAt   DateTime @updatedAt
+  
+  @@map("system_config")
+}
+
+// Config Versions - Track changes to configurations
+model ConfigVersion {
+  id          String   @id @default(cuid())
+  version     String   @unique // e.g., "2025-01-31"
+  description String?
+  createdAt   DateTime @default(now())
+  
+  @@index([createdAt])
+}
+
+// ============================================================================
+// NEW MODELS FOR SURVEY/CASE/REVIEW WORKFLOW
+// ============================================================================
+
+// Insurance Products (e.g., Life Insurance, Health Insurance)
+model Product {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "Term Life Insurance"
+  description String?  // Product description
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  questions   SurveyQuestion[]
+  cases       Case[]
+  
+  @@index([isActive])
+}
+
+enum InputType {
+  TEXT
+  NUMBER
+  YESNO
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+
+// Dynamic Survey Questions per Product
+model SurveyQuestion {
+  id                  String    @id @default(cuid())
+  productId           String
+  questionText        String    // The actual question
+  inputType           InputType // "text", "number", "yesno", "single_choice", "multiple_choice"
+  isRequired          Boolean   @default(true)
+  order               Int       @default(0)
+  helpText            String?   // Additional guidance for users
+  conditionalLogic    String?   // JSON: {"dependsOn": "questionId", "showIf": "value"}
+  evaluationFieldName String?   // Maps this question to evaluation context (e.g., "age", "extremeSports")
+  dataType            String?   // Type for evaluation: "number", "boolean", "string", "array", "object"
+  normalizationRule   String?   // JSON: transformation rules for normalization (e.g., sex mapping)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  product         Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options         QuestionOption[]
+  
+  @@index([productId, order])
+  @@index([evaluationFieldName])
+}
+
+// Options for single/multiple choice questions
+model QuestionOption {
+  id          String    @id @default(cuid())
+  questionId  String
+  value       String    // The option value (e.g., "yes", "no", "male", "female")
+  label       String    // Display label
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  question    SurveyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  @@index([questionId, order])
+}
+
+// Customer Cases (applications for insurance)
+model Case {
+  id              String   @id @default(cuid())
+  productId       String
+  customerName    String?  // Optional customer identifier
+  customerEmail   String?  // Optional contact info
+  status          String   @default("submitted") // "submitted", "under_review", "escalated", "approved", "rejected"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  product         Product              @relation(fields: [productId], references: [id])
+  answers         CaseAnswer[]
+  assessment      SystemAssessment?
+  review          UnderwriterReview?
+  
+  @@index([productId, status])
+  @@index([createdAt])
+}
+
+// Customer answers to survey questions
+model CaseAnswer {
+  id          String    @id @default(cuid())
+  caseId      String
+  questionId  String    // References which SurveyQuestion was answered
+  answerValue String    // The actual answer (JSON string for complex answers)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  case        Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  @@unique([caseId, questionId])
+  @@index([caseId])
+}
+
+// System AI Assessment Results (from evaluateApplicant)
+model SystemAssessment {
+  id                  String   @id @default(cuid())
+  caseId              String   @unique
+  decision            String   // "REJECT", "PENDING_INFORMATION", "ACCEPT", "ACCEPT_WITH_PREMIUM"
+  annualPremiumCHF    Float?   // Final premium (null if REJECT or PENDING_INFO)
+  
+  // Detailed breakdown
+  basePremiumCHF      Float?   // Base premium before risk adjustments
+  riskAdjustedPremiumCHF Float? // After risk multipliers
+  marginPercent       Float    @default(10) // Margin percentage applied
+  totalMultiplier     Float    // Total risk multiplier
+  
+  // Health classification from LLM
+  healthSeverity      String?  // "minor", "moderate", "severe"
+  healthStatus        String?  // "resolved", "ongoing", "unclear"
+  healthImpact        String?  // "none", "partial", "major"
+  healthTextRaw       String?  // Original health text from customer
+  
+  // System metadata
+  evaluationVersion   String?  // Model version, config version, etc.
+  triggeredDeclineRule String? // Name of decline rule if REJECT
+  triggeredGatherInfoRules String[] // Array of gather info rules if PENDING
+  
+  // Full audit trail (JSON blob)
+  auditTrail          String?  // Complete technical audit trail
+  
+  // Raw applicant data for simulations (JSON blob)
+  applicantData       String?  // Complete ApplicantData stored as JSON for rule change simulations
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  case                Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  riskFactorDetails   AssessmentRiskFactor[]
+  
+  @@index([caseId])
+  @@index([decision])
+}
+
+// Individual risk factor breakdown (which factors triggered)
+model AssessmentRiskFactor {
+  id                  String   @id @default(cuid())
+  assessmentId        String
+  factorName          String   // References RiskFactor.name
+  factorLabel         String   // Snapshot of risk factor label
+  multiplier          Float    // The individual multiplier applied
+  explanation         String?  // Human-readable explanation of how it was calculated
+  
+  createdAt           DateTime @default(now())
+  
+  assessment          SystemAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  
+  @@index([assessmentId])
+}
+
+// Users (Underwriters and Chief Underwriters)
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  role            String   // "underwriter", "chief_underwriter", "admin"
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  reviews         UnderwriterReview[]
+  chiefReviews    ChiefUnderwriterReview[]
+  
+  @@index([role, isActive])
+}
+
+// Underwriter Review Decisions
+model UnderwriterReview {
+  id                  String   @id @default(cuid())
+  caseId              String   @unique
+  underwriterId       String
+  decision            String   // "CONFIRM", "ADJUST", "ESCALATE"
+  
+  // If CONFIRM - underwriter agrees with system
+  confirmedDecision   String?  // Same as SystemAssessment.decision
+  
+  // If ADJUST - underwriter overrides system
+  adjustedDecision    String?  // Override decision
+  adjustedPremiumCHF  Float?   // Override premium
+  adjustmentReason    String?  // Why they adjusted
+  adjustmentNotes     String?  // Free-form notes
+  
+  // If ESCALATE - sent to chief underwriter
+  escalationReason    String?  // Why it was escalated
+  
+  status              String   @default("pending") // "pending", "reviewed", "completed"
+  reviewedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  case                Case                    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  underwriter         User                    @relation(fields: [underwriterId], references: [id])
+  chiefReview         ChiefUnderwriterReview?
+  proposals           RuleAdjustmentProposal[]
+  
+  @@index([caseId])
+  @@index([underwriterId, status])
+}
+
+// Chief Underwriter Review (for escalated cases)
+model ChiefUnderwriterReview {
+  id                  String   @id @default(cuid())
+  reviewId            String   @unique // References UnderwriterReview
+  chiefUnderwriterId  String
+  decision            String   // "APPROVE", "REJECT", "ACCEPT_WITH_PREMIUM", "GATHER_INFO"
+  
+  finalPremiumCHF     Float?   // Final approved premium
+  decisionReason      String?  // Chief's reasoning
+  feedbackNotes       String?  // Feedback to underwriter
+  
+  // Source case context for rule proposals
+  sourceCaseId        String?  // Reference to Case
+  
+  status              String   @default("pending") // "pending", "completed"
+  reviewedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  review              UnderwriterReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  chiefUnderwriter    User             @relation(fields: [chiefUnderwriterId], references: [id])
+  proposals           RuleAdjustmentProposal[] // Reverse relation to proposals
+  
+  @@index([reviewId])
+  @@index([chiefUnderwriterId, status])
+}
+
+// AI-Generated Rule Adjustment Proposals
+model RuleAdjustmentProposal {
+  id                    String   @id @default(cuid())
+  
+  // Source - can come from either UnderwriterReview or ChiefUnderwriterReview
+  reviewId              String?  // Which UnderwriterReview this came from
+  chiefReviewId         String?  // Which ChiefUnderwriterReview this came from
+  sourceCaseId          String?  // Reference to Case for traceability
+  
+  // Chief's prompt
+  chiefPrompt           String   // What chief said should be changed
+  
+  // Case context (text description from AI)
+  caseContext           String   // AI-generated case summary
+  
+  // Rule changes
+  ruleType              String   // "risk_factor", "decline_rule", "gather_info_rule", "mortality_formula"
+  ruleName              String   // Name of existing rule to modify
+  currentExpression     String?  // Current expression/formula
+  proposedExpression    String?  // Proposed expression/formula
+  
+  // AI reasoning
+  aiReasoning           String   // Why AI thinks this change is needed
+  confidence            Float    // 0-1 confidence score
+  
+  status                String   @default("pending") // "pending", "accepted", "rejected", "modified"
+  responseNotes         String?  // Human's response/notes
+  respondedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  review                UnderwriterReview? @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  chiefReview           ChiefUnderwriterReview? @relation(fields: [chiefReviewId], references: [id], onDelete: Cascade)
+  
+  @@index([reviewId, status])
+  @@index([chiefReviewId, status])
+  @@index([ruleType, status])
+  @@index([status])
+  @@index([sourceCaseId])
+}
