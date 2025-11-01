@@ -8,6 +8,114 @@ import {
 } from "@/lib/evaluation-system";
 
 /**
+ * Update a rule's expression in the database
+ */
+export async function updateRuleExpression(
+  ruleType: string,
+  ruleId: string,
+  newExpression: string
+) {
+  try {
+    if (ruleType === "risk_factor") {
+      await prisma.riskFactor.update({
+        where: { id: ruleId },
+        data: { expression: newExpression },
+      });
+    } else if (ruleType === "decline_rule") {
+      await prisma.declineRule.update({
+        where: { id: ruleId },
+        data: { expression: newExpression },
+      });
+    } else if (ruleType === "gather_info_rule") {
+      await prisma.gatherInfoRule.update({
+        where: { id: ruleId },
+        data: { condition: newExpression },
+      });
+    } else if (ruleType === "mortality_formula") {
+      await prisma.mortalityRateFormula.update({
+        where: { id: ruleId },
+        data: { formula: newExpression },
+      });
+    } else {
+      return {
+        success: false,
+        error: "Invalid rule type",
+      };
+    }
+
+    // Clear cache to reload config
+    clearConfigCache();
+
+    return {
+      success: true,
+      error: null,
+    };
+  } catch (error) {
+    console.error("Error updating rule expression:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update rule expression",
+    };
+  }
+}
+
+/**
+ * Get all active configuration rules (for diagram visualization)
+ */
+export async function getAllConfigurationRules() {
+  try {
+    const [riskFactors, declineRules, gatherInfoRules, mortalityFormulas] =
+      await Promise.all([
+        prisma.riskFactor.findMany({
+          where: { isActive: true },
+          orderBy: { order: "asc" },
+        }),
+        prisma.declineRule.findMany({
+          where: { isActive: true },
+          orderBy: { priority: "asc" },
+        }),
+        prisma.gatherInfoRule.findMany({
+          where: { isActive: true },
+          orderBy: { priority: "asc" },
+          include: { questions: true },
+        }),
+        prisma.mortalityRateFormula.findMany({
+          where: { isActive: true },
+        }),
+      ]);
+
+    return {
+      success: true,
+      rules: {
+        riskFactors,
+        declineRules,
+        gatherInfoRules,
+        mortalityFormulas,
+      },
+      error: null,
+    };
+  } catch (error) {
+    console.error("Error fetching configuration rules:", error);
+    return {
+      success: false,
+      rules: {
+        riskFactors: [],
+        declineRules: [],
+        gatherInfoRules: [],
+        mortalityFormulas: [],
+      },
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch configuration rules",
+    };
+  }
+}
+
+/**
  * Get all pending rule adjustment proposals
  */
 export async function getAllRuleProposals(options?: {
