@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { formatCHF } from "@/lib/utils";
 
 interface RuleProposalDetailProps {
   proposal: {
@@ -326,13 +327,13 @@ export default function ConfigurationDetailComponent({
                     <div className="bg-muted p-4 rounded-lg">
                       <p className="text-sm text-muted-foreground">Current Total</p>
                       <p className="text-2xl font-bold mt-1">
-                        CHF {simulationResults.totalPremiums.current.toLocaleString()}
+                        {formatCHF(simulationResults.totalPremiums.current)}
                       </p>
                     </div>
                     <div className="bg-muted p-4 rounded-lg">
                       <p className="text-sm text-muted-foreground">Proposed Total</p>
                       <p className="text-2xl font-bold mt-1">
-                        CHF {simulationResults.totalPremiums.proposed.toLocaleString()}
+                        {formatCHF(simulationResults.totalPremiums.proposed)}
                       </p>
                     </div>
                     <div className={`p-4 rounded-lg ${
@@ -347,7 +348,7 @@ export default function ConfigurationDetailComponent({
                           : "text-red-700 dark:text-red-300"
                       }`}>
                         {simulationResults.totalPremiums.difference >= 0 ? "+" : ""}
-                        CHF {simulationResults.totalPremiums.difference.toLocaleString()}
+                        {formatCHF(Math.abs(simulationResults.totalPremiums.difference))}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {simulationResults.totalPremiums.difference >= 0

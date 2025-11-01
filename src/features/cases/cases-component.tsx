@@ -16,6 +16,7 @@ import {
   TrendingUp,
   ExternalLink,
 } from "lucide-react";
+import { formatCHF } from "@/lib/utils";
 
 interface Case {
   id: string;
@@ -51,11 +52,6 @@ export default function CasesComponent({
 
   const formatId = (id: string) => {
     return id.slice(0, 8);
-  };
-
-  const formatAmount = (amount: number | null) => {
-    if (!amount) return "-";
-    return `CHF ${amount.toLocaleString()}`;
   };
 
   const getDecisionDisplay = (decision: string | null) => {
@@ -200,9 +196,7 @@ export default function CasesComponent({
                     {case_.customerName || "N/A"}
                   </TableCell>
                   <TableCell className="py-4 text-gray-900">
-                    {case_.assessment?.annualPremiumCHF
-                      ? formatAmount(case_.assessment.annualPremiumCHF)
-                      : "-"}
+                    {formatCHF(case_.assessment?.annualPremiumCHF)}
                   </TableCell>
                   <TableCell className="py-4">
                     <div className="flex items-center gap-2">

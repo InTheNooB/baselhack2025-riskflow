@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/ui/page-header";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
@@ -21,6 +22,14 @@ import {
   acceptWithPremiumEscalatedCase,
   gatherInfoEscalatedCase,
 } from "@/features/chief-reviews/chief-reviews-actions";
+import {
+  CheckCircle2,
+  XCircle,
+  Info,
+  TrendingUp,
+  Sparkles,
+} from "lucide-react";
+import { formatCHF } from "@/lib/utils";
 
 interface CaseDetailProps {
   isChief?: boolean;
@@ -97,10 +106,15 @@ interface CaseDetailProps {
   };
 }
 
-export default function CaseDetailComponent({ caseData, isChief }: CaseDetailProps) {
+export default function CaseDetailComponent({
+  caseData,
+  isChief,
+}: CaseDetailProps) {
   const router = useRouter();
   const [isReviewing, setIsReviewing] = React.useState(false);
-  const [reviewReason, setReviewReason] = React.useState("");
+  const [reviewReason, setReviewReason] = React.useState(
+    caseData.review?.escalationReason || ""
+  );
   const [isActioning, setIsActioning] = React.useState(false);
   const [actionType, setActionType] = React.useState<
     "approve" | "reject" | "accept-premium" | "gather-info" | null
@@ -111,11 +125,166 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
     caseData.assessment?.annualPremiumCHF || undefined
   );
 
+  const formatDate = (date: Date) => {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = String(d.getFullYear()).slice(-2);
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = d.getHours() >= 12 ? "PM" : "AM";
+    const hours12 = d.getHours() % 12 || 12;
+    return `${day}.${month}.${year}, ${hours12}:${minutes} ${ampm}`;
+  };
+
+  const formatCaseId = (id: string) => {
+    return `#${id.slice(0, 4)}`;
+  };
+
+  const getStatusDisplay = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string }> = {
+      submitted: { label: "Unresolved", color: "text-red-600" },
+      under_review: { label: "Unresolved", color: "text-red-600" },
+      approved: { label: "Approved", color: "text-green-600" },
+      rejected: { label: "Rejected", color: "text-red-600" },
+      escalated: { label: "Escalated", color: "text-orange-600" },
+    };
+    return (
+      statusMap[status] || {
+        label: status.charAt(0).toUpperCase() + status.slice(1),
+        color: "text-gray-600",
+      }
+    );
+  };
+
+  const getDecisionDisplay = (decision: string | null) => {
+    if (!decision) {
+      return {
+        icon: Info,
+        label: "Incomplete",
+        color: "text-blue-600",
+      };
+    }
+
+    switch (decision) {
+      case "ACCEPT":
+        return {
+          icon: CheckCircle2,
+          label: "Accepted",
+          color: "text-green-600",
+        };
+      case "ACCEPT_WITH_PREMIUM":
+        return {
+          icon: CheckCircle2,
+          label: "Accepted",
+          color: "text-green-600",
+        };
+      case "REJECT":
+        return {
+          icon: XCircle,
+          label: "Rejected",
+          color: "text-red-600",
+        };
+      case "PENDING_INFORMATION":
+        return {
+          icon: Info,
+          label: "Incomplete",
+          color: "text-blue-600",
+        };
+      default:
+        return {
+          icon: Info,
+          label: decision.replace(/_/g, " "),
+          color: "text-gray-600",
+        };
+    }
+  };
+
+  // Determine if premium was increased or reduced by comparing final premium to base premium
+  const getPremiumChange = (
+    decision: string | null,
+    premium: number | null,
+    basePremium: number | null
+  ) => {
+    // Only show Increased/Reduced for ACCEPT_WITH_PREMIUM cases with valid premiums
+    if (
+      decision === "ACCEPT_WITH_PREMIUM" &&
+      premium &&
+      basePremium &&
+      basePremium > 0
+    ) {
+      // Calculate the ratio (final includes 10% margin)
+      const baseWithMargin = basePremium * 1.1; // Expected final with standard margin
+      const ratio = premium / baseWithMargin;
+
+      // Increased: premium is >15% above base (accounting for margin + risk loading)
+      if (ratio > 1.15) {
+        return {
+          icon: TrendingUp,
+          label: "Increased",
+          color: "text-orange-600",
+        };
+      }
+    }
+    return null;
+  };
+
+  const generateExplanation = () => {
+    if (!caseData.assessment) return "";
+
+    const decision = caseData.assessment.decision;
+    const multiplier = caseData.assessment.totalMultiplier;
+    const riskFactors = caseData.assessment.riskFactorDetails || [];
+
+    if (decision === "REJECT") {
+      return caseData.assessment.triggeredDeclineRule
+        ? `Application rejected due to: ${caseData.assessment.triggeredDeclineRule}`
+        : "Application rejected based on risk assessment.";
+    }
+
+    if (decision === "PENDING_INFORMATION") {
+      return "Additional information required before a decision can be made.";
+    }
+
+    // Calculate premium increase percentage
+    const premiumIncrease =
+      multiplier > 1.0 ? Math.round((multiplier - 1.0) * 100) : 0;
+
+    // Build explanation with risk factors
+    const activeFactors = riskFactors.filter((f) => f.multiplier !== 1.0);
+    const factorDescriptions = activeFactors.map((f) =>
+      f.factorLabel.toLowerCase()
+    );
+
+    let explanation = `Based on the provided health information, the system would accept`;
+    if (premiumIncrease > 0) {
+      explanation += `, with a premium increase of ${premiumIncrease}%`;
+    }
+    explanation += ".";
+
+    if (factorDescriptions.length > 0) {
+      explanation += ` This is influenced by ${factorDescriptions.join(", ")}${
+        caseData.assessment.healthSeverity === "moderate" ||
+        caseData.assessment.healthSeverity === "severe"
+          ? `, and pre-existing conditions${
+              caseData.assessment.healthStatus === "ongoing"
+                ? ", such as " +
+                  (caseData.assessment.healthStatus
+                    ?.toLowerCase()
+                    .includes("back pain")
+                    ? "back pain for 3+ years"
+                    : "ongoing health conditions")
+                : ""
+            }`
+          : ""
+      }.`;
+    }
+
+    return explanation;
+  };
+
   const handleConfirm = async () => {
     try {
       toast.loading("Confirming assessment...", { id: "confirm" });
-
-      // TODO: Get current user ID
       const { success, error } = await confirmAssessment(caseData.id);
 
       if (success) {
@@ -137,8 +306,6 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
 
     try {
       toast.loading("Submitting review...", { id: "review" });
-
-      // TODO: Get current user ID
       const { success, error } = await reviewAssessment(
         caseData.id,
         reviewReason
@@ -164,7 +331,6 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
 
     try {
       toast.loading("Approving case...", { id: "chief-action" });
-
       const { success, error } = await approveEscalatedCase(
         caseData.id,
         finalPremium,
@@ -191,7 +357,6 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
 
     try {
       toast.loading("Rejecting case...", { id: "chief-action" });
-
       const { success, error } = await rejectEscalatedCase(
         caseData.id,
         decisionReason
@@ -217,7 +382,6 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
 
     try {
       toast.loading("Accepting with premium...", { id: "chief-action" });
-
       const { success, error } = await acceptWithPremiumEscalatedCase(
         caseData.id,
         finalPremium,
@@ -242,7 +406,9 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
 
   const handleGatherInfo = async () => {
     try {
-      toast.loading("Requesting additional information...", { id: "chief-action" });
+      toast.loading("Requesting additional information...", {
+        id: "chief-action",
+      });
 
       const { success, error } = await gatherInfoEscalatedCase(
         caseData.id,
@@ -262,528 +428,386 @@ export default function CaseDetailComponent({ caseData, isChief }: CaseDetailPro
         });
       }
     } catch {
-      toast.error("Failed to request additional information", { id: "chief-action" });
+      toast.error("Failed to request additional information", {
+        id: "chief-action",
+      });
     }
   };
 
-  const getDecisionDisplay = (decision: string) => {
-    type BadgeVariant = "default" | "destructive" | "secondary" | "outline";
-    const variants: Record<string, BadgeVariant> = {
-      REJECT: "destructive",
-      ACCEPT: "default",
-      ACCEPT_WITH_PREMIUM: "default",
-      PENDING_INFORMATION: "secondary",
-    };
-
-    return (
-      <Badge variant={variants[decision] || "secondary"}>
-        {decision.replace(/_/g, " ")}
-      </Badge>
-    );
-  };
-
-  const getStatusDisplay = (status: string) => {
-    type BadgeVariant = "default" | "destructive" | "secondary" | "outline";
-    const variants: Record<string, BadgeVariant> = {
-      submitted: "default",
-      approved: "default",
-      rejected: "destructive",
-      escalated: "destructive",
-    };
-
-    return (
-      <Badge variant={variants[status] || "default"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
+  const statusDisplay = getStatusDisplay(caseData.status);
+  const decisionDisplay = getDecisionDisplay(
+    caseData.assessment?.decision || null
+  );
+  const premiumChange = getPremiumChange(
+    caseData.assessment?.decision || null,
+    caseData.assessment?.annualPremiumCHF || null,
+    caseData.assessment?.basePremiumCHF || null
+  );
+  // Use premium change display if available, otherwise use decision display
+  const display = premiumChange || decisionDisplay;
+  const DisplayIcon = display.icon;
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Case Details</h1>
-        <p className="text-muted-foreground mt-2">Case ID: {caseData.id}</p>
-      </div>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <PageHeader
+        showBackButton
+        title={`${formatCaseId(caseData.id)} ${
+          caseData.customerName || "Unknown"
+        }`}
+      />
 
-      <div className="space-y-6">
-        {/* Escalation Notice for Chief */}
-        {isChief && caseData.status === "escalated" && (
-          <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
-            <CardHeader>
-              <CardTitle className="text-orange-900 dark:text-orange-100">
-                Escalated for Chief Review
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-orange-900 dark:text-orange-100">
-                This case was escalated by{" "}
-                {caseData.review?.underwriter.name || "an underwriter"} for your
-                review.
+      {/* Main Content */}
+      <main className="container mx-auto px-6 py-6 max-w-7xl">
+        {/* Top Cards */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          <Card className="bg-gray-50">
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-gray-700 mb-2">Product</p>
+              <p className="text-xl font-bold text-gray-900">
+                {caseData.product.name}
               </p>
-              {caseData.review?.escalationReason && (
-                <div className="mt-3">
-                  <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                    Underwriter&apos;s Reason for Escalation:
-                  </p>
-                  <p className="text-orange-800 dark:text-orange-200">
-                    {caseData.review.escalationReason}
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
-        )}
+          <Card className="bg-gray-50">
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-gray-700 mb-2">Status</p>
+              <p className={`text-xl font-bold ${statusDisplay.color}`}>
+                {statusDisplay.label}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-50">
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-gray-700 mb-2">Created</p>
+              <p className="text-xl font-bold text-gray-900">
+                {formatDate(caseData.createdAt)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Case Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium">Product</p>
-                <p className="text-muted-foreground">{caseData.product.name}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Status</p>
-                {getStatusDisplay(caseData.status)}
-              </div>
-              <div>
-                <p className="text-sm font-medium">Created</p>
-                <p className="text-muted-foreground">
-                  {new Date(caseData.createdAt).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Last Updated</p>
-                <p className="text-muted-foreground">
-                  {new Date(caseData.updatedAt).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Answers */}
-        <Card>
+        {/* Application Answers */}
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Application Answers</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableBody>
-                {caseData.questionsWithAnswers.map((qa) => (
-                  <TableRow key={qa.id}>
-                    <TableHead className="w-[300px]">
-                      {qa.questionText}
-                    </TableHead>
-                    <TableCell>
-                      {qa.answer || (
-                        <span className="text-muted-foreground italic">
-                          No answer
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="space-y-4">
+              {caseData.questionsWithAnswers.map((qa) => (
+                <div
+                  key={qa.id}
+                  className="flex gap-8 py-3 border-b border-gray-100 last:border-0"
+                >
+                  <div className="w-80 font-medium text-gray-900">
+                    {qa.questionText}
+                  </div>
+                  <div className="flex-1 text-gray-700">
+                    {qa.answer || (
+                      <span className="text-gray-400 italic">No answer</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Assessment Results */}
+        {/* AI Recommendation Section */}
         {caseData.assessment && (
-          <Card>
-            <CardHeader>
-              <CardTitle>System Recommendation</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
-                  This is an AI-generated recommendation and requires manual
-                  review by an underwriter.
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Recommended Decision</p>
-                <div className="mt-2">
-                  {getDecisionDisplay(caseData.assessment.decision)}
+          <div className="relative mb-8 border-2 border-purple-200/50 rounded-2xl p-6 bg-gradient-to-br from-purple-50/30 via-blue-50/30 to-indigo-50/30 shadow-lg">
+            {/* AI Banner */}
+            <div className="relative bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 rounded-xl p-4 border border-purple-200/50 shadow-sm mb-6">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Sparkles className="h-5 w-5 text-purple-600 animate-pulse" />
+                  <div className="absolute inset-0 bg-purple-400 rounded-full blur-sm opacity-30 animate-ping" />
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    AI-Generated
+                  </span>
+                  <span className="text-xs text-gray-600">
+                    This recommendation requires manual review by an
+                    underwriter.
+                  </span>
+                </div>
+                <div className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
               </div>
+            </div>
 
-              {caseData.assessment.annualPremiumCHF && (
-                <div>
-                  <p className="text-sm font-medium">Annual Premium</p>
-                  <p className="text-2xl font-bold">
-                    CHF {caseData.assessment.annualPremiumCHF.toLocaleString()}
+            {/* System Recommendation Cards */}
+            <div className="grid grid-cols-2 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    System Recommendation
                   </p>
-                </div>
-              )}
-
-              {caseData.assessment.riskFactorDetails &&
-                caseData.assessment.riskFactorDetails.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">
-                      Risk Factor Breakdown
+                  <div className="flex items-center gap-2">
+                    {DisplayIcon && (
+                      <DisplayIcon className={`h-5 w-5 ${display.color}`} />
+                    )}
+                    <p className={`text-lg font-semibold ${display.color}`}>
+                      {display.label}
                     </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Annual Premium
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCHF(caseData.assessment.annualPremiumCHF)}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Explanation */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Explanation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 leading-relaxed">
+                  {generateExplanation()}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Risk Factor Breakdown */}
+            {caseData.assessment.riskFactorDetails &&
+              caseData.assessment.riskFactorDetails.length > 0 && (
+                <Card className="mb-8">
+                  <CardHeader>
+                    <CardTitle>Risk Factor Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Factor</TableHead>
-                          <TableHead>Multiplier</TableHead>
-                          <TableHead>Explanation</TableHead>
+                        <TableRow className="border-b border-gray-200">
+                          <TableHead className="font-semibold text-gray-900">
+                            Factor
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900">
+                            Multiplier
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900">
+                            Explanation
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {caseData.assessment.riskFactorDetails.map((detail) => (
-                          <TableRow key={detail.factorName}>
-                            <TableCell>{detail.factorLabel}</TableCell>
-                            <TableCell>
+                          <TableRow
+                            key={detail.factorName}
+                            className="border-b border-gray-100"
+                          >
+                            <TableCell className="text-gray-900">
+                              {detail.factorLabel}
+                            </TableCell>
+                            <TableCell className="text-gray-900">
                               {detail.multiplier.toFixed(3)}x
                             </TableCell>
-                            <TableCell>{detail.explanation || "-"}</TableCell>
+                            <TableCell className="text-gray-700">
+                              {detail.explanation || "-"}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Total Multiplier:{" "}
-                      {caseData.assessment.totalMultiplier.toFixed(3)}x
-                    </p>
-                  </div>
-                )}
-
-              {caseData.assessment.triggeredDeclineRule && (
-                <div>
-                  <p className="text-sm font-medium">Decline Rule Triggered</p>
-                  <p className="text-destructive">
-                    {caseData.assessment.triggeredDeclineRule}
-                  </p>
-                </div>
+                  </CardContent>
+                </Card>
               )}
-
-              {caseData.assessment.healthSeverity && (
-                <div>
-                  <p className="text-sm font-medium">Health Classification</p>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="secondary">
-                      Severity: {caseData.assessment.healthSeverity}
-                    </Badge>
-                    <Badge variant="secondary">
-                      Status: {caseData.assessment.healthStatus}
-                    </Badge>
-                    <Badge variant="secondary">
-                      Impact: {caseData.assessment.healthImpact}
-                    </Badge>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          </div>
         )}
 
-        {/* Rule Adjustment Proposals */}
-        {isChief && caseData.review?.proposals && caseData.review.proposals.length > 0 && (
-          <Card>
+        {/* Action Buttons (Underwriter) */}
+        {!isChief && caseData.status !== "escalated" && !caseData.review && (
+          <div className="flex gap-4 mb-8">
+            <Button
+              variant="outline"
+              onClick={() => setIsReviewing(true)}
+              className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              Escalate to Chief
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              className="flex-1 bg-[#22c55e] hover:bg-[#20b755] text-white"
+            >
+              Confirm
+            </Button>
+          </div>
+        )}
+
+        {/* Escalation Reason Section */}
+        {isReviewing && (
+          <Card className="mb-8">
             <CardHeader>
-              <CardTitle>AI-Generated Rule Adjustment Proposals</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Based on the escalation reason, AI has suggested the following rule changes
-              </p>
+              <CardTitle>Reason for escalated review</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {caseData.review.proposals.map((proposal) => (
-                <div key={proposal.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold text-sm">{proposal.ruleName}</h4>
-                      <p className="text-xs text-muted-foreground">{proposal.ruleType.replace(/_/g, " ")}</p>
-                    </div>
-                    <Badge variant="secondary">
-                      {Math.round(proposal.confidence * 100)}% confidence
-                    </Badge>
-                  </div>
-                  
-                  {proposal.currentExpression && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Current:</p>
-                      <code className="text-xs bg-muted px-2 py-1 rounded block">
-                        {proposal.currentExpression}
-                      </code>
-                    </div>
-                  )}
-                  
-                  {proposal.proposedExpression && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Proposed:</p>
-                      <code className="text-xs bg-blue-50 dark:bg-blue-950 px-2 py-1 rounded block">
-                        {proposal.proposedExpression}
-                      </code>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">AI Reasoning:</p>
-                    <p className="text-sm">{proposal.aiReasoning}</p>
-                  </div>
-                  
-                  <Button variant="outline" size="sm" className="w-full">
-                    View in Configuration →
-                  </Button>
-                </div>
-              ))}
+            <CardContent className="space-y-4">
+              <Textarea
+                value={reviewReason}
+                onChange={(e) => setReviewReason(e.target.value)}
+                placeholder="Enter reason for escalation..."
+                className="min-h-[120px] resize-none"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleReview}
+                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white border-gray-900"
+                >
+                  Submit
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsReviewing(false);
+                    setReviewReason(caseData.review?.escalationReason || "");
+                  }}
+                  className="flex-1"
+                >
+                  Reject
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Chief Underwriter Actions */}
-        {isChief && caseData.status === "escalated" && !caseData.review?.chiefReview && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Chief Underwriter Decision</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isActioning ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <Button onClick={() => {
-                    setActionType("approve");
-                    setIsActioning(true);
-                  }}>Approve</Button>
-                  <Button variant="destructive" onClick={() => {
-                    setActionType("reject");
-                    setIsActioning(true);
-                  }}>Reject</Button>
-                  <Button variant="outline" onClick={() => {
-                    setActionType("accept-premium");
-                    setIsActioning(true);
-                  }}>Accept + Premium</Button>
-                  <Button variant="outline" onClick={() => {
-                    setActionType("gather-info");
-                    setIsActioning(true);
-                  }}>Gather Info</Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Reason for {actionType?.replace(/_/g, " ")}
-                    </label>
-                    <textarea
-                      value={decisionReason}
-                      onChange={(e) => setDecisionReason(e.target.value)}
-                      className="w-full min-h-[100px] px-3 py-2 border rounded-md"
-                      placeholder={`Explain why you are ${actionType?.replace(/_/g, " ")} this case...`}
-                    />
+        {isChief &&
+          caseData.status === "escalated" &&
+          !caseData.review?.chiefReview && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Chief Underwriter Decision</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!isActioning ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      onClick={() => {
+                        setActionType("approve");
+                        setIsActioning(true);
+                      }}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setActionType("reject");
+                        setIsActioning(true);
+                      }}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setActionType("accept-premium");
+                        setIsActioning(true);
+                      }}
+                    >
+                      Accept + Premium
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setActionType("gather-info");
+                        setIsActioning(true);
+                      }}
+                    >
+                      Gather Info
+                    </Button>
                   </div>
-                  {actionType === "accept-premium" && (
+                ) : (
+                  <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">
-                        Final Premium (CHF)
+                        Reason for {actionType?.replace(/_/g, " ")}
                       </label>
-                      <input
-                        type="number"
-                        value={finalPremium}
-                        onChange={(e) => setFinalPremium(parseFloat(e.target.value) || undefined)}
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Enter final premium"
+                      <Textarea
+                        value={decisionReason}
+                        onChange={(e) => setDecisionReason(e.target.value)}
+                        className="min-h-[100px] resize-none"
+                        placeholder={`Explain why you are ${actionType?.replace(
+                          /_/g,
+                          " "
+                        )} this case...`}
                       />
                     </div>
-                  )}
-                  {actionType === "gather-info" && (
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Additional Notes (Optional)
-                      </label>
-                      <textarea
-                        value={feedbackNotes}
-                        onChange={(e) => setFeedbackNotes(e.target.value)}
-                        className="w-full min-h-[80px] px-3 py-2 border rounded-md"
-                        placeholder="Provide additional information..."
-                      />
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Button onClick={
-                      actionType === "approve"
-                        ? handleApprove
-                        : actionType === "reject"
-                          ? handleReject
-                          : actionType === "accept-premium"
+                    {actionType === "accept-premium" && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Final Premium (CHF)
+                        </label>
+                        <input
+                          type="number"
+                          value={finalPremium}
+                          onChange={(e) =>
+                            setFinalPremium(
+                              parseFloat(e.target.value) || undefined
+                            )
+                          }
+                          className="w-full px-3 py-2 border rounded-md"
+                          placeholder="Enter final premium"
+                        />
+                      </div>
+                    )}
+                    {actionType === "gather-info" && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Additional Notes (Optional)
+                        </label>
+                        <Textarea
+                          value={feedbackNotes}
+                          onChange={(e) => setFeedbackNotes(e.target.value)}
+                          className="min-h-[80px] resize-none"
+                          placeholder="Provide additional information..."
+                        />
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={
+                          actionType === "approve"
+                            ? handleApprove
+                            : actionType === "reject"
+                            ? handleReject
+                            : actionType === "accept-premium"
                             ? handleAcceptWithPremium
                             : handleGatherInfo
-                    }>
-                      Submit {actionType?.replace(/-/g, " ")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsActioning(false);
-                        setActionType(null);
-                        setDecisionReason("");
-                        setFeedbackNotes("");
-                        setFinalPremium(caseData.assessment?.annualPremiumCHF || undefined);
-                      }}
-                    >
-                      Cancel
-                    </Button>
+                        }
+                      >
+                        Submit {actionType?.replace(/-/g, " ")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsActioning(false);
+                          setActionType(null);
+                          setDecisionReason("");
+                          setFeedbackNotes("");
+                          setFinalPremium(
+                            caseData.assessment?.annualPremiumCHF || undefined
+                          );
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Underwriter Review Section (non-chief) */}
-        {!isChief && caseData.status !== "escalated" && !caseData.review && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Underwriter Review</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isReviewing ? (
-                <div className="flex gap-4">
-                  <Button onClick={handleConfirm}>
-                    Confirm Recommendation
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsReviewing(true)}
-                  >
-                    Escalate to Chief
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Reason for Escalation
-                    </label>
-                    <textarea
-                      value={reviewReason}
-                      onChange={(e) => setReviewReason(e.target.value)}
-                      className="w-full min-h-[100px] px-3 py-2 border rounded-md"
-                      placeholder="Explain why you are escalating this case..."
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleReview}>Submit Review</Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsReviewing(false);
-                        setReviewReason("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Existing Review */}
-        {caseData.review && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Review Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium">Decision</p>
-                <p className="capitalize">{caseData.review.decision}</p>
-              </div>
-              {caseData.review.escalationReason && (
-                <div>
-                  <p className="text-sm font-medium">Escalation Reason</p>
-                  <p className="text-muted-foreground">
-                    {caseData.review.escalationReason}
-                  </p>
-                </div>
-              )}
-              {caseData.review.adjustedDecision && (
-                <div>
-                  <p className="text-sm font-medium">Adjusted Decision</p>
-                  <p className="capitalize">
-                    {caseData.review.adjustedDecision}
-                  </p>
-                </div>
-              )}
-              {caseData.review.adjustmentReason && (
-                <div>
-                  <p className="text-sm font-medium">Adjustment Reason</p>
-                  <p className="text-muted-foreground">
-                    {caseData.review.adjustmentReason}
-                  </p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-medium">Reviewed By</p>
-                <p className="text-muted-foreground">
-                  {caseData.review.underwriter.name} (
-                  {caseData.review.underwriter.email})
-                </p>
-              </div>
-              {caseData.review.chiefReview && (
-                <div className="ml-4 mt-4 p-4 border-l-2 border-gray-200">
-                  <h3 className="text-lg font-semibold">Chief Underwriter Decision</h3>
-                  <p>
-                    Reviewed by:{" "}
-                    <span className="font-medium">
-                      {caseData.review.chiefReview.chiefUnderwriter.name}
-                    </span>{" "}
-                    ({caseData.review.chiefReview.chiefUnderwriter.email})
-                  </p>
-                  <p>
-                    Decision:{" "}
-                    <span className="font-medium">
-                      {caseData.review.chiefReview.decision}
-                    </span>
-                  </p>
-                  {caseData.review.chiefReview.decisionReason && (
-                    <p>
-                      Reason:{" "}
-                      <span className="font-medium">
-                        {caseData.review.chiefReview.decisionReason}
-                      </span>
-                    </p>
-                  )}
-                  {caseData.review.chiefReview.finalPremiumCHF && (
-                    <p>
-                      Final Premium:{" "}
-                      <span className="font-medium">
-                        CHF {caseData.review.chiefReview.finalPremiumCHF.toLocaleString()}
-                      </span>
-                    </p>
-                  )}
-                  {caseData.review.chiefReview.feedbackNotes && (
-                    <p>
-                      Feedback:{" "}
-                      <span className="font-medium">
-                        {caseData.review.chiefReview.feedbackNotes}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+      </main>
     </div>
   );
 }

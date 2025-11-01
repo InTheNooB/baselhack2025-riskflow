@@ -77,7 +77,10 @@ export async function saveAnswer(
       },
     });
 
-    console.log("✅ [saveAnswer] Successfully saved answer for question", questionId);
+    console.log(
+      "✅ [saveAnswer] Successfully saved answer for question",
+      questionId
+    );
 
     return {
       success: true,
@@ -158,13 +161,16 @@ export async function getProductQuestions(productId: string) {
       },
     });
 
-    console.log("📋 [getProductQuestions] Fetched questions:", questions.map(q => ({
-      id: q.id,
-      questionText: q.questionText,
-      evaluationFieldName: q.evaluationFieldName,
-      inputType: q.inputType,
-      dataType: q.dataType,
-    })));
+    console.log(
+      "📋 [getProductQuestions] Fetched questions:",
+      questions.map((q) => ({
+        id: q.id,
+        questionText: q.questionText,
+        evaluationFieldName: q.evaluationFieldName,
+        inputType: q.inputType,
+        dataType: q.dataType,
+      }))
+    );
 
     return {
       success: true,
@@ -240,8 +246,9 @@ export async function isCaseEvaluated(caseId: string) {
     }
 
     // Case is evaluated if it has an assessment OR is in a final state
-    const isEvaluated = !!case_.assessment || 
-      case_.status === "approved" || 
+    const isEvaluated =
+      !!case_.assessment ||
+      case_.status === "approved" ||
       case_.status === "rejected" ||
       case_.status === "under_review" ||
       case_.status === "escalated";
@@ -324,25 +331,31 @@ export async function evaluateCase(caseId: string) {
     console.log("🔍 [evaluateCase] Starting evaluation for case", caseId);
     console.log("🔍 [evaluateCase] Total questions:", questions.length);
     console.log("🔍 [evaluateCase] Total answers:", answers.length);
-    
+
     // Log ALL questions with their full details
-    console.log("🔍 [evaluateCase] ALL QUESTIONS:", questions.map(q => ({
-      id: q.id,
-      questionText: q.questionText,
-      evaluationFieldName: q.evaluationFieldName,
-      inputType: q.inputType,
-      dataType: q.dataType,
-      hasEvaluationFieldName: !!q.evaluationFieldName,
-    })));
-    
-    console.log("🔍 [evaluateCase] Questions with evaluationFieldName:", 
-      questions.filter(q => q.evaluationFieldName).map(q => ({
+    console.log(
+      "🔍 [evaluateCase] ALL QUESTIONS:",
+      questions.map((q) => ({
         id: q.id,
-        evaluationFieldName: q.evaluationFieldName,
         questionText: q.questionText,
+        evaluationFieldName: q.evaluationFieldName,
         inputType: q.inputType,
         dataType: q.dataType,
+        hasEvaluationFieldName: !!q.evaluationFieldName,
       }))
+    );
+
+    console.log(
+      "🔍 [evaluateCase] Questions with evaluationFieldName:",
+      questions
+        .filter((q) => q.evaluationFieldName)
+        .map((q) => ({
+          id: q.id,
+          evaluationFieldName: q.evaluationFieldName,
+          questionText: q.questionText,
+          inputType: q.inputType,
+          dataType: q.dataType,
+        }))
     );
 
     // Build answer map
@@ -357,7 +370,10 @@ export async function evaluateCase(caseId: string) {
     });
 
     console.log("🔍 [evaluateCase] Answer map size:", answerMap.size);
-    console.log("🔍 [evaluateCase] Answer map entries:", Array.from(answerMap.entries()));
+    console.log(
+      "🔍 [evaluateCase] Answer map entries:",
+      Array.from(answerMap.entries())
+    );
 
     /**
      * Parse answer value based on dataType
@@ -376,7 +392,10 @@ export async function evaluateCase(caseId: string) {
         } catch {
           // If JSON parse fails, try to split by comma for arrays
           if (dataType === "array") {
-            return value.split(",").map((v) => v.trim()).filter((v) => v);
+            return value
+              .split(",")
+              .map((v) => v.trim())
+              .filter((v) => v);
           }
           return null;
         }
@@ -442,7 +461,8 @@ export async function evaluateCase(caseId: string) {
       "What is your biological sex?": "sex",
       "What coverage amount do you need? (CHF)": "coverageCHF",
       "What is your current BMI?": "bmi",
-      "Please describe any past injuries or current health conditions:": "pastInjuries",
+      "Please describe any past injuries or current health conditions:":
+        "pastInjuries",
     };
 
     /**
@@ -454,20 +474,26 @@ export async function evaluateCase(caseId: string) {
     for (const question of questions) {
       // Try to get evaluationFieldName from question or fallback to question text mapping
       let evaluationFieldName = question.evaluationFieldName;
-      
-      if (!evaluationFieldName && questionTextToFieldMap[question.questionText]) {
+
+      if (
+        !evaluationFieldName &&
+        questionTextToFieldMap[question.questionText]
+      ) {
         evaluationFieldName = questionTextToFieldMap[question.questionText];
         console.log("🔄 [evaluateCase] Using fallback mapping for question:", {
           questionText: question.questionText,
           evaluationFieldName,
         });
       }
-      
+
       if (!evaluationFieldName) {
-        console.log("⏭️  [evaluateCase] Skipping question without evaluationFieldName:", {
-          id: question.id,
-          questionText: question.questionText,
-        });
+        console.log(
+          "⏭️  [evaluateCase] Skipping question without evaluationFieldName:",
+          {
+            id: question.id,
+            questionText: question.questionText,
+          }
+        );
         continue;
       }
 
@@ -497,7 +523,10 @@ export async function evaluateCase(caseId: string) {
       });
 
       if (parsedValue === null && parsedValue !== 0 && parsedValue !== false) {
-        console.log("⏭️  [evaluateCase] Skipping null/undefined value for:", question.evaluationFieldName);
+        console.log(
+          "⏭️  [evaluateCase] Skipping null/undefined value for:",
+          question.evaluationFieldName
+        );
         continue; // Skip null/undefined values
       }
 
@@ -525,7 +554,12 @@ export async function evaluateCase(caseId: string) {
     });
 
     // Validate required core fields
-    if (!evaluationData.age || !evaluationData.sex || !evaluationData.coverageCHF || evaluationData.isSmoking === undefined) {
+    if (
+      !evaluationData.age ||
+      !evaluationData.sex ||
+      !evaluationData.coverageCHF ||
+      evaluationData.isSmoking === undefined
+    ) {
       console.error("❌ [evaluateCase] Missing required fields:", {
         hasAge: !!evaluationData.age,
         hasSex: !!evaluationData.sex,
@@ -558,10 +592,41 @@ export async function evaluateCase(caseId: string) {
       ...Object.fromEntries(
         Object.entries(evaluationData).filter(
           ([key]) =>
-            !["age", "sex", "coverageCHF", "bmi", "isSmoking", "pastInjuries"].includes(key)
+            ![
+              "age",
+              "sex",
+              "coverageCHF",
+              "bmi",
+              "isSmoking",
+              "pastInjuries",
+            ].includes(key)
         )
       ),
     };
+
+    // Extract customer name from answers
+    // Look for question with "name" in the text or evaluationFieldName "customerName"
+    const nameQuestion = questions.find(
+      (q) =>
+        q.evaluationFieldName === "customerName" ||
+        q.questionText.toLowerCase().includes("name")
+    );
+
+    let customerName: string | null = null;
+    if (nameQuestion) {
+      const nameAnswer = answerMap.get(nameQuestion.id);
+      if (nameAnswer) {
+        customerName = nameAnswer.trim();
+      }
+    }
+
+    // Update case with customer name if found
+    if (customerName) {
+      await prisma.case.update({
+        where: { id: caseId },
+        data: { customerName },
+      });
+    }
 
     // Run evaluation
     const evaluationResult = await evaluateApplicant(applicantData);

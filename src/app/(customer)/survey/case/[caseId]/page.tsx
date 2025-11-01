@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Clock, CheckCircle, XCircle, Mail, Phone } from "lucide-react";
 import Link from "next/link";
+import { formatCHF } from "@/lib/utils";
 
 interface CasePageProps {
   params: Promise<{ caseId: string }>;
@@ -66,7 +67,9 @@ export default async function CasePage({ params }: CasePageProps) {
           title: "Application Approved",
           subtitle: "Congratulations! Your application has been approved",
           message: hasPremium
-            ? `Your application has been approved. Your annual premium is CHF ${case_.assessment?.annualPremiumCHF?.toLocaleString()}.`
+            ? `Your application has been approved. Your annual premium is ${formatCHF(
+                case_.assessment?.annualPremiumCHF
+              )}.`
             : "Your application has been approved. We will contact you shortly with further details.",
           nextSteps:
             "A detailed policy document and payment information will be sent to your email address within the next business day.",
@@ -181,7 +184,7 @@ export default async function CasePage({ params }: CasePageProps) {
                         Annual Premium
                       </span>
                       <span className="text-xl font-semibold text-gray-900">
-                        CHF {statusDisplay.premium.toLocaleString()}
+                        {formatCHF(statusDisplay.premium)}
                       </span>
                     </div>
                   </div>

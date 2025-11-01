@@ -1,7 +1,6 @@
 import { getAllCases } from "@/features/cases/cases-actions";
 import CasesComponent from "@/features/cases/cases-component";
-import { Bell, Plus } from "lucide-react";
-import Image from "next/image";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function CasesPage() {
   const { cases } = await getAllCases();
@@ -30,45 +29,7 @@ export default async function CasesPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="container mx-auto px-6 py-4 max-w-7xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="text-2xl font-semibold">
-                <span className="text-[#22c55e]">.Pax</span>
-                <span className="text-gray-900"> RiskFlow</span>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                  {/* <User className="h-5 w-5 text-gray-600" /> */}
-                  <Image
-                    src="/avatar.jpg"
-                    alt="Avatar"
-                    width={40}
-                    height={40}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900">
-                    Gabriel Chätschgi
-                  </p>
-                  <p className="text-xs text-gray-500">Underwriter</p>
-                </div>
-              </div>
-              <button className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
-                <Plus className="h-4 w-4 text-gray-600" />
-              </button>
-              <button className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
-                <Bell className="h-4 w-4 text-gray-600" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Overview" />
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-6 max-w-7xl">
