@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -53,62 +52,78 @@ export default function RuleProposalList({ proposals }: RuleProposalListProps) {
     return <Badge variant="outline">{ruleType.replace(/_/g, " ")}</Badge>;
   };
 
+  const formatDate = (date: Date) => {
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${month}.${day}.${year}`;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pending Rule Adjustment Proposals</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {proposals.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            No pending proposals
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rule</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Confidence</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      {proposals.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No pending proposals</p>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-gray-200 bg-gray-50/50 hover:bg-gray-50/50">
+              <TableHead className="font-semibold text-gray-900 py-4">
+                Rule
+              </TableHead>
+              <TableHead className="font-semibold text-gray-900 py-4">
+                Type
+              </TableHead>
+              <TableHead className="font-semibold text-gray-900 py-4">
+                Source
+              </TableHead>
+              <TableHead className="font-semibold text-gray-900 py-4">
+                Confidence
+              </TableHead>
+              <TableHead className="font-semibold text-gray-900 py-4">
+                Status
+              </TableHead>
+              <TableHead className="font-semibold text-gray-900 py-4">
+                Created
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {proposals.map((proposal, index) => (
+              <TableRow
+                key={proposal.id}
+                className={`border-b border-gray-100 ${
+                  index % 2 === 0 ? "bg-white" : "bg-gray-50/30"
+                } hover:bg-gray-100/50`}
+              >
+                <TableCell className="py-4">
+                  <Link
+                    href={`/configuration/${proposal.id}`}
+                    className="font-medium text-gray-900 hover:text-gray-700 transition-colors"
+                  >
+                    {proposal.ruleName}
+                  </Link>
+                </TableCell>
+                <TableCell className="py-4">{getRuleTypeBadge(proposal.ruleType)}</TableCell>
+                <TableCell className="py-4 text-gray-900">
+                  {proposal.review?.underwriter.name || "System"}
+                </TableCell>
+                <TableCell className="py-4">
+                  <Badge variant="secondary">
+                    {Math.round(proposal.confidence * 100)}%
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-4">{getStatusBadge(proposal.status)}</TableCell>
+                <TableCell className="py-4 text-gray-900">
+                  {formatDate(proposal.createdAt)}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {proposals.map((proposal) => (
-                <TableRow key={proposal.id}>
-                  <TableCell>
-                    <Link
-                      href={`/configuration/${proposal.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {proposal.ruleName}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{getRuleTypeBadge(proposal.ruleType)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {proposal.review?.underwriter.name || "System"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {Math.round(proposal.confidence * 100)}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(proposal.status)}</TableCell>
-                  <TableCell>
-                    {new Date(proposal.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 }

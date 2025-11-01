@@ -1,10 +1,9 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PageHeader } from "@/components/ui/page-header";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { formatCHF } from "@/lib/utils";
 
 interface RuleProposalDetailProps {
@@ -53,22 +52,16 @@ export default function ConfigurationDetailComponent({
   proposal,
   simulationResults,
 }: RuleProposalDetailProps) {
-  const router = useRouter();
-
-  // Chart colors
-  const COLORS = {
-    REJECT: "#ef4444",
-    PENDING_INFORMATION: "#f59e0b",
-    ACCEPT: "#10b981",
-    ACCEPT_WITH_PREMIUM: "#3b82f6",
-  };
-
   // Prepare data for charts with better formatting
   const currentData = simulationResults
     ? Object.entries(simulationResults.currentOutcomes)
         .map(([name, value]) => ({
           key: name,
-          name: name
+          name: name === "ACCEPT" ? "Accept" : 
+                name === "ACCEPT_WITH_PREMIUM" ? "Accept & Premium" :
+                name === "REJECT" ? "Reject" :
+                name === "PENDING_INFORMATION" ? "Pending Information" :
+                name
             .replace(/_/g, " ")
             .split(" ")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -82,7 +75,11 @@ export default function ConfigurationDetailComponent({
     ? Object.entries(simulationResults.proposedOutcomes)
         .map(([name, value]) => ({
           key: name,
-          name: name
+          name: name === "ACCEPT" ? "Accept" : 
+                name === "ACCEPT_WITH_PREMIUM" ? "Accept & Premium" :
+                name === "REJECT" ? "Reject" :
+                name === "PENDING_INFORMATION" ? "Pending Information" :
+                name
             .replace(/_/g, " ")
             .split(" ")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -92,293 +89,344 @@ export default function ConfigurationDetailComponent({
         .filter((entry) => entry.value > 0) // Only show non-zero slices
     : [];
 
+  // Chart colors matching the image
+  const COLORS_MAP = {
+    "Accept": "#10b981", // green
+    "Accept & Premium": "#f97316", // orange
+    "Reject": "#ef4444", // red
+    "Pending Information": "#f59e0b", // amber
+  };
+
+  // Extract rule name for display (e.g., "BMI Rule Adjustment")
+  const getRuleDisplayName = () => {
+    if (proposal.ruleName) {
+      return `${proposal.ruleName} Rule Adjustment`;
+    }
+    return "Rule Adjustment";
+  };
+
+  // Parse case context to extract question-answer pairs
+  const parseCaseContext = () => {
+    if (!proposal.caseContext) return [];
+    const lines = proposal.caseContext.split('\n').filter(line => line.trim());
+    const pairs: Array<{ question: string; answer: string }> = [];
+    
+    for (let i = 0; i < lines.length; i += 2) {
+      if (lines[i] && lines[i + 1]) {
+        pairs.push({
+          question: lines[i].trim(),
+          answer: lines[i + 1].trim(),
+        });
+      }
+    }
+    return pairs;
+  };
+
+  const caseExcerpts = parseCaseContext();
+
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Rule Adjustment Proposal</h1>
-        <p className="text-muted-foreground mt-2">
-          Review AI-suggested rule changes
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#f8f9fa]">
+      {/* Header */}
+      <PageHeader
+        showBackButton
+        title={getRuleDisplayName()}
+      />
 
-      <div className="space-y-6">
-        {/* Proposal Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Proposal Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium">Rule Name</p>
-                <p className="text-lg font-semibold">{proposal.ruleName}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Rule Type</p>
-                <Badge variant="outline" className="mt-1">
-                  {proposal.ruleType.replace(/_/g, " ")}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Confidence</p>
-                <Badge variant="secondary" className="mt-1">
-                  {Math.round(proposal.confidence * 100)}% confident
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Status</p>
-                <Badge
-                  variant={
-                    proposal.status === "pending"
-                      ? "default"
-                      : proposal.status === "accepted"
-                        ? "default"
-                        : "destructive"
-                  }
-                  className="mt-1"
-                >
-                  {proposal.status.charAt(0).toUpperCase() +
-                    proposal.status.slice(1)}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Created</p>
-                <p className="text-sm">
-                  {new Date(proposal.createdAt).toLocaleString("en-US")}
-                </p>
-              </div>
-              {proposal.review && (
-                <div>
-                  <p className="text-sm font-medium">Source</p>
-                  <p className="text-sm">
-                    {proposal.review.underwriter.name}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Case Context */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Case Context</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium mb-2">Escalation Reason</p>
-                <p className="text-sm bg-muted p-3 rounded-md">
-                  {proposal.chiefPrompt}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium mb-2">Case Summary</p>
-                <p className="text-sm">{proposal.caseContext}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Rule Changes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Proposed Rule Changes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {proposal.currentExpression && (
-              <div>
-                <p className="text-sm font-medium mb-2">Current Expression</p>
-                <code className="block bg-muted p-4 rounded-md text-sm font-mono">
-                  {proposal.currentExpression}
-                </code>
-              </div>
-            )}
-
-            {proposal.proposedExpression && (
-              <div>
-                <p className="text-sm font-medium mb-2">Proposed Expression</p>
-                <code className="block bg-blue-50 dark:bg-blue-950 p-4 rounded-md text-sm font-mono">
-                  {proposal.proposedExpression}
-                </code>
-              </div>
-            )}
-
-            {!proposal.currentExpression && !proposal.proposedExpression && (
-              <p className="text-sm text-muted-foreground italic">
-                No expression changes proposed
+      {/* Main Content */}
+      <main className="container mx-auto px-6 py-6 max-w-7xl">
+        {/* Rule Details - Top Row Cards */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          <Card className="bg-white">
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-gray-600 mb-2">Rule Type</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {proposal.ruleType.replace(/_/g, " ")}
               </p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <Card className="bg-white">
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
+              <p className={`text-2xl font-bold ${
+                proposal.status === "pending" ? "text-red-600" :
+                proposal.status === "accepted" ? "text-green-600" :
+                "text-gray-900"
+              }`}>
+                {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white">
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-gray-600 mb-2">Confidence</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {Math.round(proposal.confidence * 100)}%
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* AI Reasoning */}
-        <Card>
-          <CardHeader>
-            <CardTitle>AI Reasoning</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{proposal.aiReasoning}</p>
-          </CardContent>
-        </Card>
-
-        {/* Impact Simulation */}
-        {simulationResults && simulationResults.totalCases > 0 && (
-          <Card>
+        <div className="space-y-6">
+          {/* Escalation Reason */}
+          <Card className="bg-white">
             <CardHeader>
-              <CardTitle>Impact Simulation</CardTitle>
+              <CardTitle>Escalation Reason</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center text-sm text-muted-foreground">
-                Analyzing {simulationResults.totalCases} historical cases
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Current Outcomes */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Current Rule</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={currentData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={false}
-                      >
-                        {currentData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[entry.key as keyof typeof COLORS]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number, name: string) => {
-                          const entry = currentData.find((d) => d.name === name);
-                          const total = currentData.reduce((sum, e) => sum + e.value, 0);
-                          const percent = entry && total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
-                          return `${value} (${percent}%)`;
-                        }}
-                      />
-                      <Legend
-                        wrapperStyle={{ paddingTop: "20px" }}
-                        formatter={(value: string) => {
-                          const entry = currentData.find((d) => d.name === value);
-                          const total = currentData.reduce((sum, e) => sum + e.value, 0);
-                          const percent = entry && total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
-                          return `${value}: ${entry?.value || 0} (${percent}%)`;
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Proposed Outcomes */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Proposed Rule</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={proposedData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={false}
-                      >
-                        {proposedData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[entry.key as keyof typeof COLORS]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number, name: string) => {
-                          const entry = proposedData.find((d) => d.name === name);
-                          const total = proposedData.reduce((sum, e) => sum + e.value, 0);
-                          const percent = entry && total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
-                          return `${value} (${percent}%)`;
-                        }}
-                      />
-                      <Legend
-                        wrapperStyle={{ paddingTop: "20px" }}
-                        formatter={(value: string) => {
-                          const entry = proposedData.find((d) => d.name === value);
-                          const total = proposedData.reduce((sum, e) => sum + e.value, 0);
-                          const percent = entry && total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
-                          return `${value}: ${entry?.value || 0} (${percent}%)`;
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Financial Impact */}
-              {simulationResults.totalPremiums && (
-                <div className="border-t pt-6 mt-6">
-                  <h3 className="text-lg font-semibold mb-4">Financial Impact</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-muted p-4 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Current Total</p>
-                      <p className="text-2xl font-bold mt-1">
-                        {formatCHF(simulationResults.totalPremiums.current)}
-                      </p>
-                    </div>
-                    <div className="bg-muted p-4 rounded-lg">
-                      <p className="text-sm text-muted-foreground">Proposed Total</p>
-                      <p className="text-2xl font-bold mt-1">
-                        {formatCHF(simulationResults.totalPremiums.proposed)}
-                      </p>
-                    </div>
-                    <div className={`p-4 rounded-lg ${
-                      simulationResults.totalPremiums.difference >= 0
-                        ? "bg-green-50 dark:bg-green-950"
-                        : "bg-red-50 dark:bg-red-950"
-                    }`}>
-                      <p className="text-sm text-muted-foreground">Difference</p>
-                      <p className={`text-2xl font-bold mt-1 ${
-                        simulationResults.totalPremiums.difference >= 0
-                          ? "text-green-700 dark:text-green-300"
-                          : "text-red-700 dark:text-red-300"
-                      }`}>
-                        {simulationResults.totalPremiums.difference >= 0 ? "+" : ""}
-                        {formatCHF(Math.abs(simulationResults.totalPremiums.difference))}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {simulationResults.totalPremiums.difference >= 0
-                          ? "More revenue"
-                          : "Less revenue"}
-                      </p>
-                    </div>
+            <CardContent>
+              <p className="text-gray-700">{proposal.chiefPrompt}</p>
+              
+              {caseExcerpts.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-sm font-semibold text-gray-900 mb-3">Relevant Case Excerpt</p>
+                  <div className="space-y-2">
+                    {caseExcerpts.map((pair, idx) => (
+                      <div key={idx} className="flex gap-4">
+                        <div className="font-medium text-gray-900 w-80">
+                          {pair.question}
+                        </div>
+                        <div className="text-gray-700">
+                          {pair.answer}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
 
-        {/* Actions */}
-        {proposal.status === "pending" && (
-          <Card>
+          {/* AI-Generated Rule Adjustment Proposals */}
+          <Card className="bg-white">
             <CardHeader>
-              <CardTitle>Actions</CardTitle>
+              <CardTitle>AI-Generated Rule Adjustment Proposals</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <Button variant="default">Accept Proposal</Button>
-                <Button variant="destructive">Reject Proposal</Button>
-                <Button variant="outline">Modify Proposal</Button>
+            <CardContent className="space-y-6">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 mb-4">{proposal.ruleName}</p>
+                
+                <div className="space-y-4">
+                  {proposal.currentExpression && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">Current</p>
+                      <code className="block bg-gray-100 p-4 rounded-md text-sm font-mono text-gray-900">
+                        {proposal.currentExpression}
+                      </code>
+                    </div>
+                  )}
+
+                  {proposal.proposedExpression && (
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-gray-700">Proposed</p>
+                        <span className="text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded">
+                          {Math.round(proposal.confidence * 100)}% confidence
+                        </span>
+                      </div>
+                      <code className="block bg-blue-50 p-4 rounded-md text-sm font-mono text-gray-900">
+                        {proposal.proposedExpression}
+                      </code>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* AI Reasoning */}
+              <div className="pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {proposal.aiReasoning}
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button variant="outline">
+                  Inspect in Configuration
+                </Button>
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+
+          {/* Impact Simulation */}
+          {simulationResults && simulationResults.totalCases > 0 && (
+            <Card className="bg-white">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Impact Simulation</CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Based on {simulationResults.totalCases} historical cases
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Current Outcomes */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Current Rule</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={currentData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={false}
+                        >
+                          {currentData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS_MAP[entry.name as keyof typeof COLORS_MAP] || "#8884d8"}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number, name: string) => {
+                            const entry = currentData.find((d) => d.name === name);
+                            const total = currentData.reduce((sum, e) => sum + e.value, 0);
+                            const percent = entry && total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
+                            return `${value} (${percent}%)`;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 mt-4">
+                      {currentData.map((entry) => {
+                        const total = currentData.reduce((sum, e) => sum + e.value, 0);
+                        const percent = total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
+                        const colorClass = entry.name === "Accept" ? "text-green-600" :
+                                          entry.name === "Accept & Premium" ? "text-orange-600" :
+                                          entry.name === "Reject" ? "text-red-600" : "text-amber-600";
+                        return (
+                          <div key={entry.key} className="flex items-center justify-between text-sm">
+                            <span className={colorClass}>{entry.name}</span>
+                            <span className="text-gray-700">
+                              {entry.value > 0 ? `${entry.value} (${percent}%)` : "-"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Proposed Outcomes */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Proposed Rule</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={proposedData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={false}
+                        >
+                          {proposedData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS_MAP[entry.name as keyof typeof COLORS_MAP] || "#8884d8"}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number, name: string) => {
+                            const entry = proposedData.find((d) => d.name === name);
+                            const total = proposedData.reduce((sum, e) => sum + e.value, 0);
+                            const percent = entry && total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
+                            return `${value} (${percent}%)`;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 mt-4">
+                      {proposedData.map((entry) => {
+                        const total = proposedData.reduce((sum, e) => sum + e.value, 0);
+                        const percent = total > 0 ? ((entry.value / total) * 100).toFixed(1) : '0';
+                        const colorClass = entry.name === "Accept" ? "text-green-600" :
+                                          entry.name === "Accept & Premium" ? "text-orange-600" :
+                                          entry.name === "Reject" ? "text-red-600" : "text-amber-600";
+                        return (
+                          <div key={entry.key} className="flex items-center justify-between text-sm">
+                            <span className={colorClass}>{entry.name}</span>
+                            <span className="text-gray-700">
+                              {entry.value > 0 ? `${entry.value} (${percent}%)` : "-"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary Totals */}
+                {simulationResults.totalPremiums && (
+                  <div className="grid grid-cols-3 gap-6 pt-6 border-t border-gray-200">
+                    <Card className="bg-white border border-gray-200">
+                      <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Current Total</p>
+                        <p className="text-3xl font-bold text-gray-900">
+                          {formatCHF(simulationResults.totalPremiums.current)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-white border border-gray-200">
+                      <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Proposed Total</p>
+                        <p className="text-3xl font-bold text-gray-900">
+                          {formatCHF(simulationResults.totalPremiums.proposed)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-white border border-gray-200">
+                      <CardContent className="p-6">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Difference</p>
+                        <p className={`text-3xl font-bold ${
+                          simulationResults.totalPremiums.difference >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}>
+                          {simulationResults.totalPremiums.difference >= 0 ? "+" : ""}
+                          {formatCHF(Math.abs(simulationResults.totalPremiums.difference))}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Actions */}
+          {proposal.status === "pending" && (
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="destructive" 
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Reject Proposal
+                  </Button>
+                  <Button variant="outline" className="bg-white">
+                    Modify Proposal
+                  </Button>
+                  <Button 
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Accept Proposal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

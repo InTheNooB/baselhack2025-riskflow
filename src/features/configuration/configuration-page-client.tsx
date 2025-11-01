@@ -247,13 +247,6 @@ export default function ConfigurationPageClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Configuration</h1>
-        <p className="text-muted-foreground mt-2">
-          Review and manage AI-generated rule adjustment proposals, visualize the rule flow, and edit rules with AI assistance
-        </p>
-      </div>
-
       <Tabs defaultValue="proposals" className="w-full">
         <TabsList>
           <TabsTrigger value="proposals">Proposals ({proposals.length})</TabsTrigger>
