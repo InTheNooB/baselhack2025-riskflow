@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/client";
-import { notFound, redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, CheckCircle, XCircle } from "lucide-react";
+import { notFound } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Clock, CheckCircle, XCircle, Mail, Phone } from "lucide-react";
+import Link from "next/link";
 
 interface CasePageProps {
   params: Promise<{ caseId: string }>;
@@ -16,11 +23,6 @@ export default async function CasePage({ params }: CasePageProps) {
     include: {
       product: true,
       assessment: true,
-      review: {
-        include: {
-          underwriter: true,
-        },
-      },
     },
   });
 
@@ -28,58 +30,88 @@ export default async function CasePage({ params }: CasePageProps) {
     notFound();
   }
 
-  // Status-based icons and text
+  // Status-based display information
   const getStatusDisplay = () => {
     switch (case_.status) {
       case "submitted":
         return {
           icon: Clock,
-          title: "Application Submitted",
-          description: "Your application is being processed. Our team will review it shortly.",
-          iconColor: "text-blue-500",
+          title: "Application Received",
+          subtitle: "Thank you for your submission",
+          message:
+            "We have successfully received your insurance application. Our underwriting team will review it shortly.",
+          nextSteps:
+            "You will receive an email confirmation shortly with your application reference number and next steps.",
+          iconBgColor: "bg-blue-50",
+          iconColor: "text-blue-600",
+          borderColor: "border-blue-200",
         };
       case "under_review":
         return {
           icon: Clock,
-          title: "Under Review",
-          description: "An underwriter is currently reviewing your application.",
-          iconColor: "text-yellow-500",
+          title: "Application Under Review",
+          subtitle: "We're reviewing your application",
+          message:
+            "Your application is currently being reviewed by our experienced underwriting team.",
+          nextSteps:
+            "We typically complete reviews within 2-3 business days. You will receive an email notification once a decision has been made.",
+          iconBgColor: "bg-yellow-50",
+          iconColor: "text-yellow-600",
+          borderColor: "border-yellow-200",
         };
       case "approved":
-        if (case_.assessment) {
-          return {
-            icon: CheckCircle,
-            title: "Application Approved!",
-            description: `Your application has been approved. Annual premium: CHF ${case_.assessment.annualPremiumCHF?.toLocaleString()}`,
-            iconColor: "text-green-500",
-          };
-        }
+        const hasPremium = case_.assessment?.annualPremiumCHF;
         return {
           icon: CheckCircle,
           title: "Application Approved",
-          description: "Your application has been approved.",
-          iconColor: "text-green-500",
+          subtitle: "Congratulations! Your application has been approved",
+          message: hasPremium
+            ? `Your application has been approved. Your annual premium is CHF ${case_.assessment?.annualPremiumCHF?.toLocaleString()}.`
+            : "Your application has been approved. We will contact you shortly with further details.",
+          nextSteps:
+            "A detailed policy document and payment information will be sent to your email address within the next business day.",
+          iconBgColor: "bg-green-50",
+          iconColor: "text-green-600",
+          borderColor: "border-green-200",
+          premium: hasPremium ? case_.assessment?.annualPremiumCHF : null,
         };
       case "rejected":
         return {
           icon: XCircle,
-          title: "Application Not Approved",
-          description: "Unfortunately, we cannot approve your application at this time.",
-          iconColor: "text-red-500",
+          title: "Application Update",
+          subtitle: "Application decision",
+          message:
+            "After careful review, we are unable to proceed with your application at this time.",
+          nextSteps:
+            "We will contact you via email within the next business day with more information about this decision. If you have any questions, please don't hesitate to reach out to our customer service team.",
+          iconBgColor: "bg-red-50",
+          iconColor: "text-red-600",
+          borderColor: "border-red-200",
         };
       case "escalated":
         return {
           icon: Clock,
           title: "Under Senior Review",
-          description: "Your application has been escalated to a chief underwriter for review.",
-          iconColor: "text-orange-500",
+          subtitle: "Additional review in progress",
+          message:
+            "Your application is being reviewed by our senior underwriting team to ensure the best possible evaluation.",
+          nextSteps:
+            "This process may take a few additional business days. We will contact you via email as soon as we have an update.",
+          iconBgColor: "bg-orange-50",
+          iconColor: "text-orange-600",
+          borderColor: "border-orange-200",
         };
       default:
         return {
           icon: Clock,
-          title: "Processing",
-          description: "Your application is being processed.",
-          iconColor: "text-gray-500",
+          title: "Application Processing",
+          subtitle: "We're working on your application",
+          message: "Your application is being processed by our team.",
+          nextSteps:
+            "You will receive an email notification once your application has been reviewed.",
+          iconBgColor: "bg-gray-50",
+          iconColor: "text-gray-600",
+          borderColor: "border-gray-200",
         };
     }
   };
@@ -88,85 +120,163 @@ export default async function CasePage({ params }: CasePageProps) {
   const StatusIcon = statusDisplay.icon;
 
   return (
-    <div className="container mx-auto py-12 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Application Status</h1>
-        <p className="text-muted-foreground mt-2">
-          Case ID: {caseId.slice(0, 12)}...
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <StatusIcon className={`h-12 w-12 ${statusDisplay.iconColor}`} />
-            <div>
-              <CardTitle className="text-2xl">{statusDisplay.title}</CardTitle>
-              <p className="text-muted-foreground mt-1">
-                {statusDisplay.description}
-              </p>
-            </div>
+    <div className="min-h-screen bg-[#f8f9fa]">
+      {/* Header */}
+      <header className="border-b border-gray-200 bg-white">
+        <div className="container mx-auto px-6 py-4 max-w-4xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[#22c55e] font-semibold text-xl">.Pax</span>
+            <span className="text-gray-900 font-semibold text-xl">
+              RiskFlow
+            </span>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h3 className="font-semibold mb-2">Product</h3>
-            <p className="text-muted-foreground">{case_.product.name}</p>
-          </div>
+        </div>
+      </header>
 
-          {case_.customerName && (
-            <div>
-              <h3 className="font-semibold mb-2">Applicant</h3>
-              <p className="text-muted-foreground">{case_.customerName}</p>
-            </div>
-          )}
+      {/* Main Content */}
+      <main className="container mx-auto px-6 py-8 max-w-4xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+            Application Status
+          </h1>
+          <p className="text-sm text-gray-600">
+            Reference:{" "}
+            <span className="font-mono">
+              {caseId.slice(0, 8).toUpperCase()}
+            </span>
+          </p>
+        </div>
 
-          {case_.assessment && (
-            <div>
-              <h3 className="font-semibold mb-2">Assessment Details</h3>
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Decision:</span>
-                  <span className="font-medium">{case_.assessment.decision}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Status Card - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <Card className={`border-2 ${statusDisplay.borderColor} bg-white`}>
+              <CardHeader className="pb-4">
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`p-3 rounded-lg ${statusDisplay.iconBgColor}`}
+                  >
+                    <StatusIcon
+                      className={`h-8 w-8 ${statusDisplay.iconColor}`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-xl font-semibold text-gray-900 mb-1">
+                      {statusDisplay.title}
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-600">
+                      {statusDisplay.subtitle}
+                    </CardDescription>
+                  </div>
                 </div>
-                {case_.assessment.annualPremiumCHF && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Annual Premium:</span>
-                    <span className="font-medium">
-                      CHF {case_.assessment.annualPremiumCHF.toLocaleString()}
-                    </span>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {statusDisplay.message}
+                </p>
+                {statusDisplay.premium && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-700 font-medium">
+                        Annual Premium
+                      </span>
+                      <span className="text-xl font-semibold text-gray-900">
+                        CHF {statusDisplay.premium.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 )}
-                {case_.assessment.totalMultiplier && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Risk Multiplier:</span>
-                    <span className="font-medium">
-                      {case_.assessment.totalMultiplier.toFixed(2)}x
-                    </span>
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <Mail className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      <span className="font-medium">Next:</span>{" "}
+                      {statusDisplay.nextSteps}
+                    </p>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {case_.review && case_.review.decision !== "CONFIRM" && (
-            <div>
-              <h3 className="font-semibold mb-2">Review Notes</h3>
-              <p className="text-muted-foreground">
-                {case_.review.adjustmentReason || case_.review.escalationReason || "No additional notes"}
-              </p>
-            </div>
-          )}
-
-          <div className="text-sm text-muted-foreground">
-            Submitted: {new Date(case_.createdAt).toLocaleString()}
-            {case_.updatedAt.getTime() !== case_.createdAt.getTime() && (
-              <> • Last updated: {new Date(case_.updatedAt).toLocaleString()}</>
-            )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Sidebar - Application Details & Contact */}
+          <div className="space-y-6">
+            {/* Application Details */}
+            <Card className="border border-gray-200 bg-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-gray-900">
+                  Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-0.5">
+                    Product
+                  </p>
+                  <p className="text-gray-900">{case_.product.name}</p>
+                </div>
+                {case_.customerName && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 mb-0.5">
+                      Applicant
+                    </p>
+                    <p className="text-gray-900">{case_.customerName}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-0.5">
+                    Submitted
+                  </p>
+                  <p className="text-gray-900">
+                    {new Date(case_.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Information */}
+            <Card className="border border-gray-200 bg-white">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-gray-900">
+                  Contact
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mail className="h-4 w-4 text-gray-600" />
+                    <p className="text-xs font-medium text-gray-900">Email</p>
+                  </div>
+                  <p className="text-gray-700">support@riskflow.com</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Phone className="h-4 w-4 text-gray-600" />
+                    <p className="text-xs font-medium text-gray-900">Phone</p>
+                  </div>
+                  <p className="text-gray-700">+41 XX XXX XX XX</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Mon-Fri, 9AM-5PM CET
+                  </p>
+                </div>
+                <div className="pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-600">
+                    Include reference{" "}
+                    <span className="font-mono">
+                      {caseId.slice(0, 8).toUpperCase()}
+                    </span>{" "}
+                    when contacting us.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
-
