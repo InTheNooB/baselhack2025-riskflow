@@ -592,17 +592,52 @@ async function main() {
   });
   console.log("✅ Mortality formulas created");
 
-  // Create Product
-  const product = await prisma.product.upsert({
-    where: { name: "Term Life Insurance" },
-    update: {},
-    create: {
+  // Create Products
+  const productsData = [
+    {
       name: "Term Life Insurance",
-      description: "Standard term life insurance product",
+      description: "Comprehensive coverage for a specified term period. Provides financial security for your loved ones with affordable premiums.",
       isActive: true,
     },
-  });
-  console.log("✅ Product created");
+    {
+      name: "Health Insurance",
+      description: "Protect your health and finances with comprehensive medical coverage. Get access to quality healthcare without worrying about medical bills.",
+      isActive: true,
+    },
+    {
+      name: "Home Insurance",
+      description: "Safeguard your property and belongings against damage, theft, and natural disasters. Peace of mind for homeowners and renters.",
+      isActive: true,
+    },
+    {
+      name: "Auto Insurance",
+      description: "Complete coverage for your vehicle including liability, collision, and comprehensive protection. Drive with confidence on the road.",
+      isActive: true,
+    },
+    {
+      name: "Business Liability Insurance",
+      description: "Protect your business from legal claims and financial losses. Essential coverage for professional liability and general business risks.",
+      isActive: true,
+    },
+    {
+      name: "Disability Insurance",
+      description: "Income protection if you become unable to work due to illness or injury. Secure your financial future and maintain your standard of living.",
+      isActive: true,
+    },
+  ];
+
+  // Create all products
+  const createdProducts = [];
+  for (const productData of productsData) {
+    const product = await prisma.product.upsert({
+      where: { name: productData.name },
+      update: {},
+      create: productData,
+    });
+    createdProducts.push(product);
+  }
+  const product = createdProducts.find((p) => p.name === "Term Life Insurance") || createdProducts[0];
+  console.log(`✅ ${createdProducts.length} products created`);
 
   // Create Survey Questions for the Product
   const nameQuestion = await prisma.surveyQuestion.create({
