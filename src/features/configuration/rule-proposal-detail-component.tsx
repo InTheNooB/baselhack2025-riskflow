@@ -133,21 +133,21 @@ export default function ConfigurationDetailComponent({
       />
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-6 max-w-7xl">
+      <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-7xl">
         {/* Rule Details - Top Row Cards */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <Card className="bg-white">
-            <CardContent className="p-5">
-              <p className="text-sm font-medium text-gray-600 mb-2">Rule Type</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <CardContent className="p-4 sm:p-5">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-2">Rule Type</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
                 {proposal.ruleType.replace(/_/g, " ")}
               </p>
             </CardContent>
           </Card>
           <Card className="bg-white">
-            <CardContent className="p-5">
-              <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
-              <p className={`text-2xl font-bold ${
+            <CardContent className="p-4 sm:p-5">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-2">Status</p>
+              <p className={`text-xl sm:text-2xl font-bold ${
                 proposal.status === "pending" ? "text-red-600" :
                 proposal.status === "accepted" ? "text-green-600" :
                 "text-gray-900"
@@ -157,34 +157,34 @@ export default function ConfigurationDetailComponent({
             </CardContent>
           </Card>
           <Card className="bg-white">
-            <CardContent className="p-5">
-              <p className="text-sm font-medium text-gray-600 mb-2">Confidence</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <CardContent className="p-4 sm:p-5">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 mb-2">Confidence</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {Math.round(proposal.confidence * 100)}%
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Escalation Reason */}
           <Card className="bg-white">
             <CardHeader>
-              <CardTitle>Escalation Reason</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Escalation Reason</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-700">{proposal.chiefPrompt}</p>
+            <CardContent className="px-4 sm:px-6">
+              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">{proposal.chiefPrompt}</p>
               
               {caseExcerpts.length > 0 && (
-                <div className="mt-6">
-                  <p className="text-sm font-semibold text-gray-900 mb-3">Relevant Case Excerpt</p>
-                  <div className="space-y-2">
+                <div className="mt-4 sm:mt-6">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 mb-3">Relevant Case Excerpt</p>
+                  <div className="space-y-3 sm:space-y-2">
                     {caseExcerpts.map((pair, idx) => (
-                      <div key={idx} className="flex gap-4">
-                        <div className="font-medium text-gray-900 w-80">
+                      <div key={idx} className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                        <div className="font-medium text-gray-900 sm:w-80 flex-shrink-0">
                           {pair.question}
                         </div>
-                        <div className="text-gray-700">
+                        <div className="text-sm sm:text-base text-gray-700 break-words">
                           {pair.answer}
                         </div>
                       </div>
@@ -198,17 +198,17 @@ export default function ConfigurationDetailComponent({
           {/* AI-Generated Rule Adjustment Proposals */}
           <Card className="bg-white">
             <CardHeader>
-              <CardTitle>AI-Generated Rule Adjustment Proposals</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">AI-Generated Rule Adjustment Proposals</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="px-4 sm:px-6 space-y-4 sm:space-y-6">
               <div>
-                <p className="text-sm font-semibold text-gray-900 mb-4">{proposal.ruleName}</p>
+                <p className="text-xs sm:text-sm font-semibold text-gray-900 mb-3 sm:mb-4">{proposal.ruleName}</p>
                 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {proposal.currentExpression && (
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">Current</p>
-                      <code className="block bg-gray-100 p-4 rounded-md text-sm font-mono text-gray-900">
+                      <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Current</p>
+                      <code className="block bg-gray-100 p-3 sm:p-4 rounded-md text-xs sm:text-sm font-mono text-gray-900 overflow-x-auto">
                         {proposal.currentExpression}
                       </code>
                     </div>
@@ -216,13 +216,13 @@ export default function ConfigurationDetailComponent({
 
                   {proposal.proposedExpression && (
                     <div className="relative">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-gray-700">Proposed</p>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
+                        <p className="text-xs sm:text-sm font-medium text-gray-700">Proposed</p>
                         <span className="text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded">
                           {Math.round(proposal.confidence * 100)}% confidence
                         </span>
                       </div>
-                      <code className="block bg-blue-50 p-4 rounded-md text-sm font-mono text-gray-900">
+                      <code className="block bg-blue-50 p-3 sm:p-4 rounded-md text-xs sm:text-sm font-mono text-gray-900 overflow-x-auto">
                         {proposal.proposedExpression}
                       </code>
                     </div>
@@ -231,14 +231,14 @@ export default function ConfigurationDetailComponent({
               </div>
 
               {/* AI Reasoning */}
-              <div className="pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              <div className="pt-3 sm:pt-4 border-t border-gray-200">
+                <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {proposal.aiReasoning}
                 </p>
               </div>
 
-              <div className="flex justify-end pt-4">
-                <Button variant="outline">
+              <div className="flex justify-end pt-3 sm:pt-4">
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm">
                   Inspect in Configuration
                 </Button>
               </div>
@@ -249,19 +249,20 @@ export default function ConfigurationDetailComponent({
           {simulationResults && simulationResults.totalCases > 0 && (
             <Card className="bg-white">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Impact Simulation</CardTitle>
-                  <p className="text-sm text-gray-600">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <CardTitle className="text-lg sm:text-xl">Impact Simulation</CardTitle>
+                  <p className="text-xs sm:text-sm text-gray-600">
                     Based on {simulationResults.totalCases} historical cases
                   </p>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <CardContent className="px-4 sm:px-6 space-y-6 sm:space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                   {/* Current Outcomes */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Current Rule</h3>
-                    <ResponsiveContainer width="100%" height={250}>
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Current Rule</h3>
+                    <div className="w-full h-[200px] sm:h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={currentData}
@@ -289,7 +290,8 @@ export default function ConfigurationDetailComponent({
                           }}
                         />
                       </PieChart>
-                    </ResponsiveContainer>
+                      </ResponsiveContainer>
+                    </div>
                     <div className="space-y-2 mt-4">
                       {currentData.map((entry) => {
                         const total = currentData.reduce((sum, e) => sum + e.value, 0);
@@ -310,9 +312,10 @@ export default function ConfigurationDetailComponent({
                   </div>
 
                   {/* Proposed Outcomes */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Proposed Rule</h3>
-                    <ResponsiveContainer width="100%" height={250}>
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Proposed Rule</h3>
+                    <div className="w-full h-[200px] sm:h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={proposedData}
@@ -340,7 +343,8 @@ export default function ConfigurationDetailComponent({
                           }}
                         />
                       </PieChart>
-                    </ResponsiveContainer>
+                      </ResponsiveContainer>
+                    </div>
                     <div className="space-y-2 mt-4">
                       {proposedData.map((entry) => {
                         const total = proposedData.reduce((sum, e) => sum + e.value, 0);
@@ -363,27 +367,27 @@ export default function ConfigurationDetailComponent({
 
                 {/* Summary Totals */}
                 {simulationResults.totalPremiums && (
-                  <div className="grid grid-cols-3 gap-6 pt-6 border-t border-gray-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-gray-200">
                     <Card className="bg-white border border-gray-200">
-                      <CardContent className="p-6">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Current Total</p>
-                        <p className="text-3xl font-bold text-gray-900">
+                      <CardContent className="p-4 sm:p-6">
+                        <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Current Total</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
                           {formatCHF(simulationResults.totalPremiums.current)}
                         </p>
                       </CardContent>
                     </Card>
                     <Card className="bg-white border border-gray-200">
-                      <CardContent className="p-6">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Proposed Total</p>
-                        <p className="text-3xl font-bold text-gray-900">
+                      <CardContent className="p-4 sm:p-6">
+                        <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Proposed Total</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
                           {formatCHF(simulationResults.totalPremiums.proposed)}
                         </p>
                       </CardContent>
                     </Card>
-                    <Card className="bg-white border border-gray-200">
-                      <CardContent className="p-6">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Difference</p>
-                        <p className={`text-3xl font-bold ${
+                    <Card className="bg-white border border-gray-200 sm:col-span-2 lg:col-span-1">
+                      <CardContent className="p-4 sm:p-6">
+                        <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Difference</p>
+                        <p className={`text-xl sm:text-2xl lg:text-3xl font-bold break-words ${
                           simulationResults.totalPremiums.difference >= 0
                             ? "text-green-600"
                             : "text-red-600"
@@ -403,21 +407,27 @@ export default function ConfigurationDetailComponent({
           {proposal.status === "pending" && (
             <Card className="bg-white">
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Actions</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-4">
+              <CardContent className="px-4 sm:px-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <Button 
                     variant="destructive" 
-                    className="bg-red-600 hover:bg-red-700 text-white"
+                    className="bg-red-600 hover:bg-red-700 text-white flex-1 sm:flex-none"
+                    size="sm"
                   >
                     Reject Proposal
                   </Button>
-                  <Button variant="outline" className="bg-white">
+                  <Button 
+                    variant="outline" 
+                    className="bg-white flex-1 sm:flex-none"
+                    size="sm"
+                  >
                     Modify Proposal
                   </Button>
                   <Button 
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
+                    size="sm"
                   >
                     Accept Proposal
                   </Button>
