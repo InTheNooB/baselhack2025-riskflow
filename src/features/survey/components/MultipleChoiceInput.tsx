@@ -33,13 +33,19 @@ export function MultipleChoiceInput({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={`multiple-${label}`}>
+      <Label
+        htmlFor={`multiple-${label}`}
+        className="text-sm font-medium text-gray-900"
+      >
         {label}
-        {required && <span className="text-destructive ml-1">*</span>}
+        {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {options.map((option) => (
-          <div key={option.value} className="flex items-center space-x-2">
+          <div
+            key={option.value}
+            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
+          >
             <Checkbox
               id={`${label}-${option.value}`}
               checked={value.includes(option.value)}
@@ -49,7 +55,7 @@ export function MultipleChoiceInput({
             />
             <Label
               htmlFor={`${label}-${option.value}`}
-              className="cursor-pointer font-normal"
+              className="cursor-pointer font-normal text-gray-700 flex-1"
             >
               {option.label}
             </Label>
@@ -57,16 +63,15 @@ export function MultipleChoiceInput({
         ))}
       </div>
       {helpText && (
-        <p id={`${label}-help`} className="text-xs text-muted-foreground">
+        <p id={`${label}-help`} className="text-xs text-gray-500 mt-1">
           {helpText}
         </p>
       )}
       {error && (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-xs text-red-600 mt-1" role="alert">
           {error}
         </p>
       )}
     </div>
   );
 }
-

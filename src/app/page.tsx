@@ -91,8 +91,8 @@ export default async function Home() {
                 >
                   <CardHeader className="pb-4 flex-1">
                     <div className="flex items-center gap-4 mb-2">
-                      <div className="p-3 rounded-lg bg-[#f0f9ff]">
-                        <Icon className="h-6 w-6 text-[#0ea5e9]" />
+                      <div className="p-3 rounded-lg bg-[#f8faf8]">
+                        <Icon className="h-6 w-6 text-[#22c55e]" />
                       </div>
                       <CardTitle className="text-xl font-semibold text-gray-900">
                         {product.name}

@@ -35,6 +35,6 @@ export default async function SurveyPage({
     );
   }
 
-  return <SurveyForm productId={productId} questions={questions} />;
+  return <SurveyForm productId={productId} productName={product.name} questions={questions} />;
 }
 

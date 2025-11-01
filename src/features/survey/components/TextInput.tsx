@@ -25,9 +25,9 @@ export function TextInput({
 }: TextInputProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={`text-${label}`}>
+      <Label htmlFor={`text-${label}`} className="text-sm font-medium text-gray-900">
         {label}
-        {required && <span className="text-destructive ml-1">*</span>}
+        {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       <Input
         id={`text-${label}`}
@@ -35,17 +35,18 @@ export function TextInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        className="h-11 bg-white border-gray-300 focus:border-[#0ea5e9] focus:ring-[#0ea5e9]"
         aria-required={required}
         aria-invalid={!!error}
         aria-describedby={helpText ? `${label}-help` : undefined}
       />
       {helpText && (
-        <p id={`${label}-help`} className="text-xs text-muted-foreground">
+        <p id={`${label}-help`} className="text-xs text-gray-500 mt-1">
           {helpText}
         </p>
       )}
       {error && (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-xs text-red-600 mt-1" role="alert">
           {error}
         </p>
       )}
