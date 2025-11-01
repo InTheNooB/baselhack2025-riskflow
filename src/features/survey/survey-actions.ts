@@ -218,6 +218,49 @@ export async function getProducts() {
 }
 
 /**
+ * Check if a case has been evaluated (has an assessment) or is in a final state
+ */
+export async function isCaseEvaluated(caseId: string) {
+  try {
+    const case_ = await prisma.case.findUnique({
+      where: { id: caseId },
+      select: {
+        id: true,
+        status: true,
+        assessment: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!case_) {
+      return { isEvaluated: true, exists: false };
+    }
+
+    // Case is evaluated if it has an assessment OR is in a final state
+    const isEvaluated = !!case_.assessment || 
+      case_.status === "approved" || 
+      case_.status === "rejected" ||
+      case_.status === "under_review" ||
+      case_.status === "escalated";
+
+    return {
+      isEvaluated,
+      exists: true,
+      status: case_.status,
+    };
+  } catch (error) {
+    console.error("Error checking case status:", error);
+    return {
+      isEvaluated: true, // Assume evaluated on error to be safe
+      exists: false,
+    };
+  }
+}
+
+/**
  * Get existing answers for a case
  */
 export async function getCaseAnswers(caseId: string) {

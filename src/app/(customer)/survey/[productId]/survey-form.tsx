@@ -16,6 +16,7 @@ import {
   saveAnswer,
   evaluateCase,
   getCaseAnswers,
+  isCaseEvaluated,
 } from "@/features/survey/survey-actions";
 import { toast } from "sonner";
 
@@ -198,49 +199,59 @@ export default function SurveyForm({
         );
 
         if (storedCaseId) {
-          // Case exists, load existing answers
-          setCaseId(storedCaseId);
-          const { success, answers: existingAnswers } = await getCaseAnswers(
-            storedCaseId
-          );
+          // Check if the case has been evaluated
+          const { isEvaluated } = await isCaseEvaluated(storedCaseId);
 
-          if (success && existingAnswers) {
-            // Parse and populate answers from database
-            const parsedAnswers = new Map<
-              string,
-              string | number | boolean | string[] | null
-            >();
+          if (isEvaluated) {
+            // Case has been evaluated/submitted, create a new one
+            console.log("Case already evaluated, creating new case");
+            localStorage.removeItem(`${STORAGE_KEY_PREFIX}${productId}`);
+            // Continue to create new case below
+          } else {
+            // Case exists and hasn't been evaluated, load existing answers
+            setCaseId(storedCaseId);
+            const { success, answers: existingAnswers } = await getCaseAnswers(
+              storedCaseId
+            );
 
-            for (const question of questions) {
-              const answerString = existingAnswers.get(question.id);
-              if (answerString !== undefined) {
-                const parsedValue = parseAnswerValue(
-                  answerString,
-                  question.inputType
-                );
-                parsedAnswers.set(question.id, parsedValue);
-              } else {
-                // If no answer exists, only use default for non-YESNO/non-SINGLE_CHOICE questions
-                if (
-                  question.inputType !== "YESNO" &&
-                  question.inputType !== "SINGLE_CHOICE"
-                ) {
-                  const defaultValue = getDefaultValue(question);
-                  if (defaultValue !== null) {
-                    parsedAnswers.set(question.id, defaultValue);
-                    // Save default to backend
-                    await saveAnswer(storedCaseId, question.id, defaultValue);
+            if (success && existingAnswers) {
+              // Parse and populate answers from database
+              const parsedAnswers = new Map<
+                string,
+                string | number | boolean | string[] | null
+              >();
+
+              for (const question of questions) {
+                const answerString = existingAnswers.get(question.id);
+                if (answerString !== undefined) {
+                  const parsedValue = parseAnswerValue(
+                    answerString,
+                    question.inputType
+                  );
+                  parsedAnswers.set(question.id, parsedValue);
+                } else {
+                  // If no answer exists, only use default for non-YESNO/non-SINGLE_CHOICE questions
+                  if (
+                    question.inputType !== "YESNO" &&
+                    question.inputType !== "SINGLE_CHOICE"
+                  ) {
+                    const defaultValue = getDefaultValue(question);
+                    if (defaultValue !== null) {
+                      parsedAnswers.set(question.id, defaultValue);
+                      // Save default to backend
+                      await saveAnswer(storedCaseId, question.id, defaultValue);
+                    }
                   }
+                  // YESNO and SINGLE_CHOICE remain null/unselected
                 }
-                // YESNO and SINGLE_CHOICE remain null/unselected
               }
+
+              setAnswers(parsedAnswers);
             }
 
-            setAnswers(parsedAnswers);
+            setIsInitializing(false);
+            return;
           }
-
-          setIsInitializing(false);
-          return;
         }
 
         // Create new case
@@ -624,7 +635,7 @@ export default function SurveyForm({
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                  <div className="text-blue-600 mt-0.5">ℹ️</div>
+                  <div className="text-[#f8faf8] mt-0.5">ℹ️</div>
                   <div className="flex-1">
                     <p className="text-sm text-gray-700 leading-relaxed">
                       By submitting this application, you confirm that all

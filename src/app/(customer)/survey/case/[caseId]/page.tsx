@@ -42,9 +42,9 @@ export default async function CasePage({ params }: CasePageProps) {
             "We have successfully received your insurance application. Our underwriting team will review it shortly.",
           nextSteps:
             "You will receive an email confirmation shortly with your application reference number and next steps.",
-          iconBgColor: "bg-blue-50",
-          iconColor: "text-blue-600",
-          borderColor: "border-blue-200",
+          iconBgColor: "bg-[#f8faf8]",
+          iconColor: "text-[#22c55e]",
+          borderColor: "border-[#e5e7eb]",
         };
       case "under_review":
         return {
@@ -186,9 +186,9 @@ export default async function CasePage({ params }: CasePageProps) {
                     </div>
                   </div>
                 )}
-                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <div className="bg-[#f8faf8] border border-[#e5e7eb] rounded-lg p-3">
                   <div className="flex items-start gap-2">
-                    <Mail className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <Mail className="h-4 w-4 text-[#22c55e] mt-0.5" />
                     <p className="text-xs text-gray-700 leading-relaxed">
                       <span className="font-medium">Next:</span>{" "}
                       {statusDisplay.nextSteps}
