@@ -74,7 +74,7 @@ pnpm dev
 
 ## 📚 Documentation
 
-For detailed documentation, see **[DOCUMENTATION.md](code/DOCUMENTATION.md)**
+For detailed documentation, see **[DOCUMENTATION.md](documentation/DOCUMENTATION.md)**
 
 Includes:
 - Complete architecture overview
