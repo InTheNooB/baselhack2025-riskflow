@@ -11,14 +11,15 @@
 7. [Expression Language](#7-expression-language)
 8. [Setup & Installation](#8-setup--installation)
 9. [Usage Guide](#9-usage-guide)
-10. [Examples & Use Cases](#10-examples--use-cases)
-11. [API Reference](#11-api-reference)
-12. [Advanced Topics](#12-advanced-topics)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Best Practices](#14-best-practices)
-15. [Future Enhancements](#15-future-enhancements)
-16. [Glossary](#16-glossary)
-17. [Appendix](#17-appendix)
+10. [Key Concepts](#10-key-concepts)
+11. [Examples & Use Cases](#11-examples--use-cases)
+12. [API Reference](#12-api-reference)
+13. [Advanced Topics](#13-advanced-topics)
+14. [Troubleshooting](#14-troubleshooting)
+15. [Best Practices](#15-best-practices)
+16. [Future Enhancements](#16-future-enhancements)
+17. [Glossary](#17-glossary)
+18. [Appendix](#18-appendix)
 
 ---
 
@@ -101,6 +102,89 @@ The system consists of three main parts:
 2. **Configuration Interface** (`/config`) - Admin rule management
 3. **Evaluation Engine** - Core logic for risk assessment
 
+### 2.1.1 System Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Customer Application                     │
+│                  (Survey Form Submission)                    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Evaluation System Pipeline                     │
+│                                                             │
+│  1. Health Text → LLM Classification (GPT-4o)             │
+│     "Chronic back pain" → {severity: "moderate", ...}       │
+│                                                             │
+│  2. Decision Gates (Database Rules)                        │
+│     • REJECT Gate → Check decline rules                    │
+│     • GATHER_INFO Gate → Check info requirements            │
+│                                                             │
+│  3. Risk Factor Evaluation (Database Config)               │
+│     • Load active risk factors                             │
+│     • Evaluate expressions (BMI, smoking, age, health)     │
+│     • Calculate total multiplier                            │
+│                                                             │
+│  4. Premium Calculation (Database Formulas)                │
+│     • Base premium = coverage × mortality rate              │
+│     • Risk-adjusted = base × total multiplier               │
+│     • Final = risk-adjusted × margin                       │
+│                                                             │
+│  5. Decision Classification                                │
+│     • REJECT / PENDING_INFO / ACCEPT / ACCEPT_WITH_PREMIUM │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    System Assessment                        │
+│              (Stored in Database with Full                  │
+│               Audit Trail and Risk Breakdown)                │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Underwriter Review (Optional)                  │
+│     • Confirm system decision                               │
+│     • Adjust premium/decision                               │
+│     • Escalate to Chief Underwriter                         │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│          Chief Underwriter Review (If Escalated)            │
+│     • Final decision                                        │
+│     • Generate rule adjustment proposals                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2.1.2 Configuration Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              Natural Language Rule Creation                  │
+│     User: "Add BMI loading above 30, 2% per point"         │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              AI Parsing (GPT-4o)                            │
+│     Extracts: rule type, expression, metadata                │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Database Storage (PostgreSQL)                   │
+│     Saves: RiskFactor with expression                        │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Graph Visualization                            │
+│     Interactive flow diagram of rule logic                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ### 2.2 Component Structure
 
 ```
@@ -117,12 +201,60 @@ src/app/
     └── types.ts                 # TypeScript types
 
 src/lib/
-├── db.ts                        # Prisma client
-└── config-loader.ts             # Load rules from database
+├── client.ts                   # Prisma client
+├── evaluation-system.ts        # Core evaluation logic
+└── utils.ts                   # Utility functions
 
-prisma/
-├── schema.prisma                # Database schema
-└── seed.ts                      # Initial data seeding
+code/
+├── prisma/
+│   ├── schema.prisma          # Database schema
+│   ├── seed.ts                # Initial data seeding
+│   └── migrations/            # Database migrations
+│
+├── src/
+│   ├── app/
+│   │   ├── (admin)/           # Admin routes (protected)
+│   │   │   ├── (chief-underwriter)/
+│   │   │   │   ├── configuration/  # Rule configuration
+│   │   │   │   ├── reviews/         # Chief reviews
+│   │   │   │   └── simulations/     # Rule simulation testing
+│   │   │   └── cases/               # Case management
+│   │   │
+│   │   ├── (customer)/        # Customer-facing routes
+│   │   │   └── survey/         # Survey forms and results
+│   │   │
+│   │   ├── api/               # API routes
+│   │   │   └── configuration/
+│   │   │       └── chat/       # AI chat endpoint
+│   │   │
+│   │   ├── page.tsx           # Home page (product selection)
+│   │   ├── layout.tsx         # Root layout
+│   │   └── globals.css        # Global styles
+│   │
+│   ├── components/
+│   │   └── ui/                 # Reusable UI components
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── input.tsx
+│   │       └── ...
+│   │
+│   ├── features/
+│   │   ├── cases/             # Case management features
+│   │   ├── configuration/     # Rule configuration features
+│   │   ├── survey/            # Survey features
+│   │   ├── simulations/        # Simulation features
+│   │   └── chief-reviews/      # Review workflow features
+│   │
+│   └── lib/
+│       ├── client.ts          # Prisma client
+│       ├── evaluation-system.ts  # Core evaluation logic
+│       └── utils.ts           # Utility functions
+│
+├── public/                     # Static assets
+├── package.json                # Dependencies
+├── tsconfig.json              # TypeScript config
+├── next.config.ts             # Next.js config
+└── README.md                   # Project README
 ```
 
 ### 2.3 Technology Stack
@@ -1146,16 +1278,17 @@ Always available:
 
 ### 8.1 Prerequisites
 
-- **Node.js**: 18+ recommended
-- **pnpm**: Package manager
-- **OpenAI API Key**: For LLM features
-- **Git**: Version control (optional)
+- **Node.js**: 18+ (recommended: 20+)
+- **pnpm**: Package manager ([install guide](https://pnpm.io/installation))
+- **PostgreSQL**: Database (or use a managed service)
+- **OpenAI API Key**: For AI features
 
 ### 8.2 Installation Steps
 
-1. **Clone/Navigate to project**
+1. **Clone the repository**
    ```bash
-   cd blackbox-v0
+   git clone <repository-url>
+   cd baselhack2025-riskflow/code
    ```
 
 2. **Install dependencies**
@@ -1164,65 +1297,73 @@ Always available:
    ```
 
 3. **Set up environment variables**
-   ```bash
-   # .env file should contain:
-   DATABASE_URL="file:./dev.db"
-   OPENAI_API_KEY="sk-..."
+   Create a `.env` file in the `code/` directory:
+   ```env
+   # Database
+   DATABASE_URL="postgresql://user:password@localhost:5432/riskflow?schema=public"
+   
+   # OpenAI API (for AI features)
+   OPENAI_API_KEY="sk-your-api-key-here"
+   
+   # Optional: Node environment
+   NODE_ENV="development"
    ```
 
-4. **Generate Prisma Client**
+4. **Set up the database**
    ```bash
+   # Generate Prisma Client
    pnpm db:generate
-   ```
-
-5. **Create database and tables**
-   ```bash
-   pnpm db:push
-   ```
-
-6. **Seed initial data**
-   ```bash
+   
+   # Run migrations
+   pnpm db:migrate
+   
+   # Seed initial data (products, default rules, etc.)
    pnpm db:seed
    ```
 
-7. **Start development server**
+5. **Start the development server**
    ```bash
    pnpm dev
    ```
 
-8. **Open browser**
-   - Application: http://localhost:3000
-   - Configuration: http://localhost:3000/config
+6. **Open your browser**
+   - Application: [http://localhost:3000](http://localhost:3000)
+   - Configuration: Navigate to `/configuration` (admin access)
 
-### 8.3 Database Setup
+### 8.3 Quick Verification
+
+After starting the server, you should see:
+- ✅ Home page with product selection
+- ✅ Products available in the database
+- ✅ Navigation working correctly
+
+### 8.4 Database Setup
 
 **Initial Setup:**
-- SQLite database created at `prisma/dev.db`
-- Tables created automatically via `db:push`
+- PostgreSQL database (or SQLite for development)
+- Tables created automatically via migrations
 
 **Seed Data Includes:**
-- 6 Risk Factors (BMI, smoking, age, health factors)
-- 2 Decline Rules (severe ongoing, severe major impact)
-- 3 Gather Info Rules (missing BMI, unclear status, vague description)
-- 2 Mortality Formulas (male, female)
+- Insurance products (Term Life, etc.)
+- Risk Factors (BMI, smoking, age, health factors)
+- Decline Rules (severe ongoing, severe major impact)
+- Gather Info Rules (missing BMI, unclear status, vague description)
+- Mortality Formulas (male, female)
 - System config entries
 
 **Verify Setup:**
 ```bash
-# Check database exists
-ls -la prisma/dev.db
-
 # Open Prisma Studio to browse data
 pnpm db:studio
 ```
 
-### 8.4 Environment Variables
+### 8.5 Environment Variables
 
 **Required:**
 
 ```bash
 # Database connection
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://user:password@localhost:5432/riskflow?schema=public"
 
 # OpenAI API key for LLM features
 OPENAI_API_KEY="sk-your-key-here"
@@ -1234,7 +1375,7 @@ OPENAI_API_KEY="sk-your-key-here"
 NODE_ENV="development"
 ```
 
-### 8.5 Running the Application
+### 8.6 Running the Application
 
 **Development:**
 ```bash
@@ -1252,6 +1393,7 @@ pnpm start
 ```bash
 pnpm db:generate  # Generate Prisma client
 pnpm db:push     # Push schema to database
+pnpm db:migrate  # Run migrations
 pnpm db:seed     # Seed initial data
 pnpm db:studio   # Open Prisma Studio
 pnpm lint        # Run linter
@@ -1682,7 +1824,7 @@ Add 20% loading for ongoing conditions
 
 ---
 
-## 11. API Reference
+## 12. API Reference
 
 ### 11.1 Server Actions
 
@@ -1936,7 +2078,7 @@ async function calculatePremium(
 
 ---
 
-## 12. Advanced Topics
+## 13. Advanced Topics
 
 ### 12.1 Expression Patterns
 
@@ -2095,7 +2237,7 @@ const CACHE_TTL = 60 * 1000; // 1 minute
 
 ---
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 ### 13.1 Common Issues
 
@@ -2247,7 +2389,7 @@ console.log(triggered); // true or false
 
 ---
 
-## 14. Best Practices
+## 15. Best Practices
 
 ### 14.1 Rule Design
 
@@ -2375,7 +2517,7 @@ cp prisma/dev.db.backup prisma/dev.db
 
 ---
 
-## 15. Future Enhancements
+## 16. Future Enhancements
 
 ### 15.1 Potential Features
 
@@ -2476,7 +2618,7 @@ model Product {
 
 ---
 
-## 16. Glossary
+## 17. Glossary
 
 **Applicant**: Person applying for insurance coverage
 
@@ -2508,7 +2650,7 @@ model Product {
 
 ---
 
-## 17. Appendix
+## 18. Appendix
 
 ### 17.1 File Structure
 
